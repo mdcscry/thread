@@ -1,0 +1,47 @@
+# Render Blueprint for THREAD - AI Wardrobe Stylist
+# https://render.com/docs/blueprints
+
+services:
+  # Web Service - Node.js backend + frontend
+  - type: web
+    name: thread-app
+    env: node
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js --production
+    plan: free  # or $7/month for always-on
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_PATH
+        value: /data/thread.db
+      - key: IMAGE_STORAGE_PATH
+        value: /data/images
+      - key: OLLAMA_BASE_URL
+        value:  # Leave empty for local-only, or set to external Ollama URL
+      - key: DEFAULT_VISION_MODEL
+        value: llava:7b
+      - key: DEFAULT_TEXT_MODEL
+        value: llama3.2:3b
+      - key: ENABLE_WEBHOOKS
+        value: "false"
+      - key: ENABLE_MULTI_USER
+        value: "false"
+      - key: WEATHER_API_BASE
+        value: https://api.open-meteo.com/v1
+      - key: JWT_SECRET
+        generateValue: true
+      - key: API_KEY_PREFIX
+        value: thread_sk_
+
+# Persistent disk for database and images
+disks:
+  - name: thread-data
+    mountPath: /data
+    sizeGB: 1
+    plan: 512MB  # Free tier plan

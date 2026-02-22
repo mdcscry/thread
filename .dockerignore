@@ -1,0 +1,17 @@
+node_modules
+client/node_modules
+.git
+*.log
+.DS_Store
+*.env
+!*.env.example
+*.env.local
+data/*.db
+data/*.db-journal
+test-results
+tests
+ml-service
+docs
+.vscode
+*.md
+!DEPLOY.md

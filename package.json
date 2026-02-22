@@ -1,0 +1,44 @@
+{
+  "name": "thread-wardrobe",
+  "version": "1.0.0",
+  "description": "AI Wardrobe Stylist - fully local, no cloud",
+  "type": "module",
+  "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && vite --host",
+    "build": "cd client && vite build",
+    "serve": "node server/index.js --production",
+    "setup": "bash setup.sh",
+    "db:migrate": "node server/db/migrate.js",
+    "db:seed": "node server/db/seed.js",
+    "db:reset": "node server/db/reset.js",
+    "check:ollama": "node scripts/check-ollama.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/multipart": "^9.4.0",
+    "@fastify/static": "^7.0.0",
+    "@fastify/websocket": "^9.0.0",
+    "@tensorflow/tfjs-node": "^4.17.0",
+    "bcrypt": "^5.1.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.0",
+    "fastify": "^4.26.0",
+    "jsonwebtoken": "^9.0.0",
+    "knex": "^3.1.0",
+    "node-fetch": "^3.3.0",
+    "p-limit": "^5.0.0",
+    "qrcode": "^1.5.0",
+    "sharp": "^0.33.0",
+    "sql.js": "^1.10.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "concurrently": "^8.2.0",
+    "localtunnel": "^2.0.2",
+    "playwright": "^1.58.2",
+    "vite": "^5.2.0",
+    "vite-plugin-pwa": "^0.19.0"
+  }
+}
