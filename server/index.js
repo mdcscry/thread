@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import fastifyStatic from '@fastify/static'
+import fastifyMultipart from '@fastify/multipart'
 import websocket from '@fastify/websocket'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -30,6 +31,7 @@ import usersRoutes from './routes/users.js'
 import voiceRoutes from './routes/voice.js'
 import onboardingRoutes from './routes/onboarding.js'
 import inviteRoutes from './routes/invites.js'
+import exportRoutes from './routes/export.js'
 
 // Initialize database
 import { initializeDatabase } from './db/client.js'
@@ -50,6 +52,12 @@ const fastify = Fastify({
 await fastify.register(cors, {
   origin: true,
   credentials: true
+})
+
+await fastify.register(fastifyMultipart, {
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB limit
+  }
 })
 
 await fastify.register(websocket)
@@ -81,6 +89,7 @@ fastify.register(usersRoutes, { prefix: '/api/v1' })
 fastify.register(voiceRoutes, { prefix: '/api/v1' })
 fastify.register(onboardingRoutes, { prefix: '/api/v1' })
 fastify.register(inviteRoutes, { prefix: '/api/v1' })
+fastify.register(exportRoutes, { prefix: '/api/v1' })
 
 // Health check
 fastify.get('/health', async () => {

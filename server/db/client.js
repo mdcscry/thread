@@ -42,6 +42,16 @@ export function saveDb() {
   fs.writeFileSync(dbPath, buffer)
 }
 
+// Close and reload database (for import operations)
+export async function closeAndReloadDatabase() {
+  if (db) {
+    db.close()
+    db = null
+  }
+  // Re-initialize
+  return await getDb()
+}
+
 // Helper for running queries - returns results as objects
 export function runQuery(sql, params = []) {
   if (!db) throw new Error('Database not initialized')
