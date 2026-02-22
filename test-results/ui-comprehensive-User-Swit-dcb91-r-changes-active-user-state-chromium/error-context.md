@@ -1,0 +1,61 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]: THREAD
+    - navigation [ref=e7]:
+      - link "👗" [ref=e8] [cursor=pointer]:
+        - /url: "#"
+      - link "✨" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "📷" [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "✈️" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+      - link "👥" [active] [ref=e12] [cursor=pointer]:
+        - /url: "#"
+      - link "📥" [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - link "⚙️" [ref=e14] [cursor=pointer]:
+        - /url: "#"
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - heading "👥 Profiles" [level=1] [ref=e17]
+      - generic [ref=e18]:
+        - generic [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]:
+            - generic [ref=e21]: U
+            - generic [ref=e22]:
+              - heading "User One" [level=3] [ref=e23]
+              - paragraph [ref=e24]: you@localhost
+          - generic [ref=e26]:
+            - generic [ref=e27]: Man
+            - button "✏️ Edit" [ref=e28]
+        - generic [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: P
+            - generic [ref=e32]:
+              - heading "Partner" [level=3] [ref=e33]
+              - paragraph [ref=e34]: partner@localhost
+          - generic [ref=e36]:
+            - generic [ref=e37]: No gender set
+            - button "✏️ Edit" [ref=e38]
+      - heading "👔 Couple Coordination" [level=2] [ref=e39]
+      - paragraph [ref=e40]: Generate outfits for both of you together — optimized for coordination at shared events.
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: Person 1
+          - combobox [ref=e44]:
+            - option "User One (man)" [selected]
+            - option "Partner"
+        - generic [ref=e45]:
+          - generic [ref=e46]: Person 2
+          - combobox [ref=e47]:
+            - option "User One (man)"
+            - option "Partner" [selected]
+        - generic [ref=e48]:
+          - generic [ref=e49]: What are you doing?
+          - textbox "Date night, friend's wedding, Colorado hiking..." [ref=e50]
+        - button "👔 Generate Couple Outfits" [disabled] [ref=e51] [cursor=pointer]
+```

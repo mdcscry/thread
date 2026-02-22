@@ -1,0 +1,185 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]: THREAD
+    - navigation [ref=e7]:
+      - link "👗" [active] [ref=e8] [cursor=pointer]:
+        - /url: "#"
+      - link "✨" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "📷" [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "✈️" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+      - link "👥" [ref=e12] [cursor=pointer]:
+        - /url: "#"
+      - link "📥" [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - link "⚙️" [ref=e14] [cursor=pointer]:
+        - /url: "#"
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - heading "👗 Your Wardrobe" [level=1] [ref=e18]
+        - generic [ref=e19]: 16 items
+      - generic [ref=e20]:
+        - textbox "Search..." [ref=e21]
+        - generic [ref=e22]:
+          - button "All" [ref=e23] [cursor=pointer]
+          - button "Top" [ref=e24] [cursor=pointer]
+          - button "Knitwear" [ref=e25] [cursor=pointer]
+          - button "Bottom" [ref=e26] [cursor=pointer]
+          - button "Dress" [ref=e27] [cursor=pointer]
+          - button "Outerwear" [ref=e28] [cursor=pointer]
+          - button "Shoes" [ref=e29] [cursor=pointer]
+          - button "Bag" [ref=e30] [cursor=pointer]
+          - button "Accessory" [ref=e31] [cursor=pointer]
+          - button "Activewear" [ref=e32] [cursor=pointer]
+      - generic [ref=e33]:
+        - generic [ref=e34] [cursor=pointer]:
+          - img "soft_delete_test" [ref=e35]
+          - generic [ref=e36]:
+            - button "🤍" [ref=e37]
+            - button "🗑️" [ref=e38]
+            - generic [ref=e39]: ⚑
+          - generic [ref=e40]:
+            - generic [ref=e41]: soft_delete_test
+            - generic [ref=e42]: null · null
+        - generic [ref=e43] [cursor=pointer]:
+          - img "patch_test" [ref=e44]
+          - generic [ref=e45]:
+            - button "🤍" [ref=e46]
+            - button "🗑️" [ref=e47]
+            - generic [ref=e48]: ⚑
+          - generic [ref=e49]:
+            - generic [ref=e50]: patch_test
+            - generic [ref=e51]: No color · uncategorized
+        - generic [ref=e52] [cursor=pointer]:
+          - img "patch_test" [ref=e53]
+          - generic [ref=e54]:
+            - button "🤍" [ref=e55]
+            - button "🗑️" [ref=e56]
+            - generic [ref=e57]: ⚑
+          - generic [ref=e58]:
+            - generic [ref=e59]: patch_test
+            - generic [ref=e60]: No color · uncategorized
+        - generic [ref=e61] [cursor=pointer]:
+          - img "delete_test" [ref=e62]
+          - generic [ref=e63]:
+            - button "🤍" [ref=e64]
+            - button "🗑️" [ref=e65]
+            - generic [ref=e66]: ⚑
+          - generic [ref=e67]:
+            - generic [ref=e68]: delete_test
+            - generic [ref=e69]: No color · uncategorized
+        - generic [ref=e70] [cursor=pointer]:
+          - img "storage_test" [ref=e71]
+          - generic [ref=e72]:
+            - button "🤍" [ref=e73]
+            - button "🗑️" [ref=e74]
+            - generic [ref=e75]: ⚑
+          - generic [ref=e76]:
+            - generic [ref=e77]: storage_test
+            - generic [ref=e78]: No color · uncategorized
+        - generic [ref=e79] [cursor=pointer]:
+          - img "storage_test" [ref=e80]
+          - generic [ref=e81]:
+            - button "🤍" [ref=e82]
+            - button "🗑️" [ref=e83]
+            - generic [ref=e84]: ⚑
+          - generic [ref=e85]:
+            - generic [ref=e86]: storage_test
+            - generic [ref=e87]: No color · uncategorized
+        - generic [ref=e88] [cursor=pointer]:
+          - img "dup_test_1" [ref=e89]
+          - generic [ref=e90]:
+            - button "🤍" [ref=e91]
+            - button "🗑️" [ref=e92]
+            - generic [ref=e93]: ⚑
+          - generic [ref=e94]:
+            - generic [ref=e95]: dup_test_1
+            - generic [ref=e96]: No color · uncategorized
+        - generic [ref=e97] [cursor=pointer]:
+          - img "dup_test_1" [ref=e98]
+          - generic [ref=e99]:
+            - button "🤍" [ref=e100]
+            - button "🗑️" [ref=e101]
+            - generic [ref=e102]: ⚑
+          - generic [ref=e103]:
+            - generic [ref=e104]: dup_test_1
+            - generic [ref=e105]: No color · uncategorized
+        - generic [ref=e106] [cursor=pointer]:
+          - img "soft_delete_test" [ref=e107]
+          - generic [ref=e108]:
+            - button "🤍" [ref=e109]
+            - button "🗑️" [ref=e110]
+            - generic [ref=e111]: ⚑
+          - generic [ref=e112]:
+            - generic [ref=e113]: soft_delete_test
+            - generic [ref=e114]: No color · uncategorized
+        - generic [ref=e115] [cursor=pointer]:
+          - img "patch_test" [ref=e116]
+          - generic [ref=e117]:
+            - button "🤍" [ref=e118]
+            - button "🗑️" [ref=e119]
+            - generic [ref=e120]: ⚑
+          - generic [ref=e121]:
+            - generic [ref=e122]: patch_test
+            - generic [ref=e123]: No color · uncategorized
+        - generic [ref=e124] [cursor=pointer]:
+          - img "patch_test" [ref=e125]
+          - generic [ref=e126]:
+            - button "🤍" [ref=e127]
+            - button "🗑️" [ref=e128]
+            - generic [ref=e129]: ⚑
+          - generic [ref=e130]:
+            - generic [ref=e131]: patch_test
+            - generic [ref=e132]: No color · uncategorized
+        - generic [ref=e133] [cursor=pointer]:
+          - img "dup_test_1" [ref=e134]
+          - generic [ref=e135]:
+            - button "🤍" [ref=e136]
+            - button "🗑️" [ref=e137]
+            - generic [ref=e138]: ⚑
+          - generic [ref=e139]:
+            - generic [ref=e140]: dup_test_1
+            - generic [ref=e141]: No color · uncategorized
+        - generic [ref=e142] [cursor=pointer]:
+          - img "soft_delete_test" [ref=e143]
+          - generic [ref=e144]:
+            - button "🤍" [ref=e145]
+            - button "🗑️" [ref=e146]
+            - generic [ref=e147]: ⚑
+          - generic [ref=e148]:
+            - generic [ref=e149]: soft_delete_test
+            - generic [ref=e150]: No color · uncategorized
+        - generic [ref=e151] [cursor=pointer]:
+          - img "patch_test" [ref=e152]
+          - generic [ref=e153]:
+            - button "🤍" [ref=e154]
+            - button "🗑️" [ref=e155]
+            - generic [ref=e156]: ⚑
+          - generic [ref=e157]:
+            - generic [ref=e158]: patch_test
+            - generic [ref=e159]: No color · uncategorized
+        - generic [ref=e160] [cursor=pointer]:
+          - img "delete_test" [ref=e161]
+          - generic [ref=e162]:
+            - button "🤍" [ref=e163]
+            - button "🗑️" [ref=e164]
+            - generic [ref=e165]: ⚑
+          - generic [ref=e166]:
+            - generic [ref=e167]: delete_test
+            - generic [ref=e168]: No color · uncategorized
+        - generic [ref=e169] [cursor=pointer]:
+          - img "storage_test" [ref=e170]
+          - generic [ref=e171]:
+            - button "🤍" [ref=e172]
+            - button "🗑️" [ref=e173]
+            - generic [ref=e174]: ⚑
+          - generic [ref=e175]:
+            - generic [ref=e176]: storage_test
+            - generic [ref=e177]: No color · uncategorized
+```
