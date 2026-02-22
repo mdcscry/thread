@@ -18,6 +18,76 @@ async function loginNav(page, emoji) {
 
 test.describe('Outfits — API', () => {
 
+  test('POST /outfits/from-item returns suggestions for valid itemId', async ({ request }) => {
+    // First get a valid item ID from the user's wardrobe
+    const itemsRes = await request.get(`${BASE}/api/v1/items`, { headers: HEADERS })
+    const items = await itemsRes.json()
+    
+    if (!items || items.length === 0) {
+      test.skip() // No items in wardrobe
+      return
+    }
+    
+    const itemId = items[0].id
+    const res = await request.post(`${BASE}/api/v1/outfits/from-item`, {
+      headers: HEADERS,
+      data: { itemId }
+    })
+    
+    expect(res.ok()).toBeTruthy()
+    const body = await res.json()
+    expect(body).toHaveProperty('item')
+    expect(body).toHaveProperty('suggestions')
+    expect(Array.isArray(body.suggestions)).toBe(true)
+  })
+
+  test('POST /outfits/from-item returns 404 for invalid itemId', async ({ request }) => {
+    const res = await request.post(`${BASE}/api/v1/outfits/from-item`, {
+      headers: HEADERS,
+      data: { itemId: 999999 }
+    })
+    
+    expect(res.status()).toBe(404)
+    const body = await res.json()
+    expect(body).toHaveProperty('error')
+    expect(body.error).toContain('not found')
+  })
+
+  test('POST /outfits/from-item returns 400 when itemId is missing', async ({ request }) => {
+    const res = await request.post(`${BASE}/api/v1/outfits/from-item`, {
+      headers: HEADERS,
+      data: {}
+    })
+    
+    expect(res.status()).toBe(400)
+    const body = await res.json()
+    expect(body).toHaveProperty('error')
+    expect(body.error).toContain('required')
+  })
+
+  test('POST /outfits/from-item returns empty suggestions when no matches found', async ({ request }) => {
+    // Get items and try one that may not have complements
+    const itemsRes = await request.get(`${BASE}/api/v1/items`, { headers: HEADERS })
+    const items = await itemsRes.json()
+    
+    if (!items || items.length === 0) {
+      test.skip()
+      return
+    }
+    
+    const itemId = items[0].id
+    const res = await request.post(`${BASE}/api/v1/outfits/from-item`, {
+      headers: HEADERS,
+      data: { itemId }
+    })
+    
+    expect(res.ok()).toBeTruthy()
+    const body = await res.json()
+    expect(body).toHaveProperty('suggestions')
+    // Suggestions may be empty but should be an array
+    expect(Array.isArray(body.suggestions)).toBe(true)
+  })
+
   test('GET /outfits returns array', async ({ request }) => {
     const res = await request.get(`${BASE}/api/v1/outfits`, { headers: HEADERS })
     expect(res.ok()).toBeTruthy()
@@ -166,6 +236,12 @@ test.describe('Outfits — UI', () => {
     const thumbs = page.locator('button').filter({ hasText: /👍|👎|♥|love|worn/i })
     // These might not be visible until outfits are generated — just check page loads cleanly
     await expect(page.locator('h1, h2').first()).toBeVisible()
+  })
+
+  test('outfit studio has "Start with an item" button', async ({ page }) => {
+    await loginNav(page, '✨')
+    const btn = page.locator('button').filter({ hasText: /start with an item|start with/i }).first()
+    await expect(btn).toBeVisible()
   })
 
 })

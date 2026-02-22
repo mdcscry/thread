@@ -23,6 +23,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Import routes
 import itemsRoutes from './routes/items.js'
 import outfitsRoutes from './routes/outfits.js'
+import outfitsFromItemRoutes from './routes/outfits-from-item.js'
 import ingestionRoutes from './routes/ingestion.js'
 import weatherRoutes from './routes/weather.js'
 import vacationRoutes from './routes/vacation.js'
@@ -81,6 +82,7 @@ await initializeDatabase()
 // Register routes
 fastify.register(itemsRoutes, { prefix: '/api/v1' })
 fastify.register(outfitsRoutes, { prefix: '/api/v1' })
+fastify.register(outfitsFromItemRoutes, { prefix: '/api/v1' })
 fastify.register(ingestionRoutes, { prefix: '/api/v1' })
 fastify.register(weatherRoutes, { prefix: '/api/v1' })
 fastify.register(vacationRoutes, { prefix: '/api/v1' })

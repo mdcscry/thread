@@ -25,6 +25,7 @@
 
 ## ✅ Done
 
+- ✅ Build outfit from item — select an item, get complementary pieces
 - ✅ Smoke tests (160 passing)
 - ✅ HTTPS with mkcert
 - ✅ PM2 self-healing
