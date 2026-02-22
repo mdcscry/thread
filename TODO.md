@@ -4,7 +4,6 @@
 
 - **Onboarding flow** — 5-question UI, user_preferences table
 - **Multi-user invites** — couples sharing via invite links
-- **Export/Import** — backup/restore wardrobe as zip
 
 ## 📋 Backlog
 
@@ -25,6 +24,7 @@
 
 ## ✅ Done
 
+- ✅ Export/Import — backup/restore wardrobe as zip
 - ✅ Build outfit from item — select an item, get complementary pieces
 - ✅ Smoke tests (160 passing)
 - ✅ HTTPS with mkcert
