@@ -36,6 +36,13 @@
 16. **Hardcoded paths** — `IngestionService.js` has hardcoded `IMAGE_ROOT`. Move to env var `IMAGE_STORAGE_PATH`
 17. **DB path** — `server/db/client.js` has hardcoded `/Users/matthewcryer/...`. Move to env var `DATABASE_PATH`
 
+## 💾 Data Export/Import
+
+24. **Export/Import** — Add endpoints to backup and restore wardrobe:
+    - GET /api/v1/export — download zip with DB + images
+    - POST /api/v1/import — upload zip, restore wardrobe
+    - Useful for: move between providers, backup, local↔Render sync
+
 ## 🤖 LLM Verification (untested)
 
 21. **Verify llama3.2:3b works** — Test outfit suggestions, vacation planning, natural language queries. The API endpoints exist but LLM responses haven't been verified. Manual test: POST /api/v1/outfits/generate with an occasion, see what it returns.
