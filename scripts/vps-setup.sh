@@ -2,13 +2,15 @@
 # ============================================================================
 # VPS Setup Script — THREAD + OpenClaw + Ollama + Tailscale + Caddy
 # 
-# Run this on a fresh Ubuntu 22.04/24.04 VPS with GPU (24GB VRAM)
-# As root or with sudo:
-#   curl -fsSL https://raw.githubusercontent.com/mdcscry/thread/main/scripts/vps-setup.sh | bash
+# Target: DatabaseMart GPU VPS — RTX Pro 4000 Ada (24GB VRAM)
+#         24 CPU cores, 60GB RAM, 320GB SSD, Ubuntu 22.04 LTS
+#         Order: 5148848963
 #
-# Or clone and run:
-#   git clone git@github.com:mdcscry/thread.git
-#   cd thread && bash scripts/vps-setup.sh
+# Run as root:
+#   bash scripts/vps-setup.sh
+#
+# Or remote:
+#   scp scripts/vps-setup.sh root@VPS_IP:~ && ssh root@VPS_IP bash vps-setup.sh
 # ============================================================================
 
 set -euo pipefail
@@ -27,13 +29,26 @@ echo "╔═══════════════════════�
 echo "║  VPS Setup: THREAD + OpenClaw + GPU      ║"
 echo "╚══════════════════════════════════════════╝"
 
-# ── 1. System packages ──────────────────────────────────────────────────────
-echo "▸ [1/9] System packages..."
+# ── 1. System packages + NVIDIA check ───────────────────────────────────────
+echo "▸ [1/10] System packages..."
 apt-get update -qq
 apt-get install -y -qq \
   curl wget git build-essential sqlite3 \
   ca-certificates gnupg lsb-release \
-  ufw fail2ban unattended-upgrades jq
+  ufw fail2ban unattended-upgrades jq htop nvtop
+
+# Verify GPU — DatabaseMart should pre-install NVIDIA drivers
+echo "▸ Checking GPU..."
+if command -v nvidia-smi &>/dev/null; then
+  echo "  ✅ NVIDIA driver found:"
+  nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
+else
+  echo "  ⚠️  No nvidia-smi found. Installing NVIDIA drivers..."
+  apt-get install -y -qq nvidia-driver-535 nvidia-cuda-toolkit
+  echo "  ⚠️  REBOOT REQUIRED after driver install. Run this script again after reboot."
+  echo "  Run: reboot"
+  exit 1
+fi
 
 # ── 2. Create deploy user ───────────────────────────────────────────────────
 echo "▸ [2/9] Creating deploy user..."
@@ -74,14 +89,31 @@ if ! command -v ollama &>/dev/null; then
   curl -fsSL https://ollama.com/install.sh | sh
 fi
 
-# Pull models (runs in background — they're big)
-echo "  Pulling models in background..."
+# Pull models — RTX 4000 Ada has 24GB VRAM
+# llava:7b (~4.7GB) + llama3.2:3b (~2GB) + moondream (~1.7GB) = ~8.4GB
+# Plenty of headroom for larger models later
+echo "  Pulling models (RTX 4000 Ada, 24GB VRAM)..."
 su - "$APP_USER" -c '
-  nohup ollama pull llava:7b > /tmp/ollama-pull.log 2>&1 &
-  nohup ollama pull llama3.2:3b >> /tmp/ollama-pull.log 2>&1 &
-  nohup ollama pull moondream >> /tmp/ollama-pull.log 2>&1 &
+  echo "=== Model pull started $(date) ===" > /tmp/ollama-pull.log
+  ollama pull llava:7b >> /tmp/ollama-pull.log 2>&1 && echo "✅ llava:7b done" >> /tmp/ollama-pull.log &
+  ollama pull llama3.2:3b >> /tmp/ollama-pull.log 2>&1 && echo "✅ llama3.2:3b done" >> /tmp/ollama-pull.log &
+  ollama pull moondream >> /tmp/ollama-pull.log 2>&1 && echo "✅ moondream done" >> /tmp/ollama-pull.log &
+  wait
+  echo "=== All models pulled $(date) ===" >> /tmp/ollama-pull.log
+  echo ""
+  echo "  VRAM budget (24GB):"
+  echo "    llava:7b      ~4.7GB  (vision — clothing analysis fallback)"
+  echo "    llama3.2:3b   ~2.0GB  (text — outfit param extraction)"
+  echo "    moondream     ~1.7GB  (fast vision — <1s per image!)"
+  echo "    ─────────────────────"
+  echo "    Total         ~8.4GB  (15.6GB free for bigger models later)"
+  echo ""
+  echo "  Optional upgrades:"
+  echo "    ollama pull llava:13b      (~8GB, better quality)"
+  echo "    ollama pull deepseek-r1:14b (~9GB, reasoning)"
+  echo "    ollama pull phi4:14b       (~9GB, general)"
 '
-echo "  Models downloading in background. Check: tail -f /tmp/ollama-pull.log"
+echo "  Check: tail -f /tmp/ollama-pull.log"
 
 # ── 6. Caddy (reverse proxy + auto SSL) ─────────────────────────────────────
 echo "▸ [6/9] Caddy..."
@@ -129,8 +161,15 @@ EOF
 mkdir -p /var/log/caddy
 systemctl restart caddy
 
-# ── 7. Firewall ─────────────────────────────────────────────────────────────
-echo "▸ [7/9] Firewall..."
+# ── 7. Firewall + SSH hardening ──────────────────────────────────────────────
+echo "▸ [7/10] Firewall + SSH..."
+
+# SSH hardening
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/#PermitRootLogin yes/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+systemctl restart sshd
+echo "  ⚠️  SSH password auth disabled. Make sure your SSH key is on this machine!"
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
@@ -142,7 +181,7 @@ ufw allow 41641/udp  # Tailscale
 ufw --force enable
 
 # ── 8. THREAD app ───────────────────────────────────────────────────────────
-echo "▸ [8/9] THREAD app..."
+echo "▸ [8/10] THREAD app..."
 su - "$APP_USER" -c "
   export PATH=\"\$HOME/.local/share/fnm:\$PATH\"
   eval \"\$(fnm env)\"
@@ -214,7 +253,7 @@ PM2EOF
 "
 
 # ── 9. OpenClaw ─────────────────────────────────────────────────────────────
-echo "▸ [9/9] OpenClaw..."
+echo "▸ [9/10] OpenClaw..."
 su - "$APP_USER" -c "
   export PATH=\"\$HOME/.local/share/fnm:\$PATH\"
   eval \"\$(fnm env)\"
@@ -235,8 +274,8 @@ su - "$APP_USER" -c "
   echo ''
 "
 
-# ── 10. Backup cron ─────────────────────────────────────────────────────────
-echo "▸ Setting up nightly backup..."
+# ── 10. Backup cron ────────────────────────────────────────────────────────
+echo "▸ [10/10] Backup cron..."
 cat > /etc/cron.d/thread-backup << 'CRONEOF'
 # Nightly SQLite backup at 3 AM
 0 3 * * * deploy sqlite3 /data/thread.db ".backup /data/backups/thread-$(date +\%Y\%m\%d).db" && find /data/backups -name "thread-*.db" -mtime +30 -delete
@@ -274,5 +313,14 @@ echo "║    PM2:      pm2 status / pm2 logs thread            ║"
 echo "║    Caddy:    systemctl status caddy                  ║"
 echo "║                                                      ║"
 echo "║  Backups: /data/backups/ (nightly, 30-day retention) ║"
+echo "║                                                      ║"
+echo "║  GPU monitoring:                                     ║"
+echo "║    nvidia-smi          (snapshot)                    ║"
+echo "║    nvtop               (live, like htop for GPU)     ║"
+echo "║    ollama ps           (loaded models + VRAM usage)  ║"
+echo "║                                                      ║"
+echo "║  Hardware: RTX Pro 4000 Ada (24GB VRAM)              ║"
+echo "║           24 cores, 60GB RAM, 320GB SSD              ║"
+echo "║           DatabaseMart Order: 5148848963             ║"
 echo "║                                                      ║"
 echo "╚══════════════════════════════════════════════════════╝"
