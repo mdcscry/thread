@@ -7,7 +7,7 @@ const CATEGORIES = [
   // Tops
   'T-Shirt',
   'Button-Up', 
-  'Sweater',
+  'Knitwear',
   'Hoodie',
   'Jacket',
   // Bottoms
