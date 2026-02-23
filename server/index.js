@@ -1,5 +1,7 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
+import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import fastifyMultipart from '@fastify/multipart'
 import websocket from '@fastify/websocket'
@@ -45,8 +47,12 @@ const tlsOptions = existsSync(certPath) && existsSync(keyPath)
   ? { https: { cert: readFileSync(certPath), key: readFileSync(keyPath) } }
   : {}
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 const fastify = Fastify({
-  logger: true,
+  logger: isProduction
+    ? { level: 'info' }                    // Structured JSON logs for Render
+    : { level: 'info', transport: { target: 'pino-pretty' } },  // Pretty logs for dev
   ...tlsOptions
 })
 
@@ -68,6 +74,29 @@ fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function
 await fastify.register(cors, {
   origin: true,
   credentials: true
+})
+
+// Security headers (CSP, HSTS, X-Frame-Options, etc.)
+await fastify.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],  // Vite dev needs inline
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],  // Allow image URLs
+      connectSrc: ["'self'", "ws:", "wss:", "https://api.open-meteo.com"],
+    }
+  },
+  crossOriginEmbedderPolicy: false,  // Allow loading external images
+})
+
+// Global rate limiting
+await fastify.register(rateLimit, {
+  max: 200,          // 200 requests per minute globally
+  timeWindow: '1 minute',
+  keyGenerator: (request) => {
+    return request.headers['x-forwarded-for'] || request.ip
+  }
 })
 
 await fastify.register(fastifyMultipart, {
@@ -94,6 +123,22 @@ await fastify.register(fastifyStatic, {
 // Initialize database (async for sql.js)
 await initializeDatabase()
 
+// Run migrations on startup (idempotent — safe to re-run)
+try {
+  const migrationsDir = path.join(__dirname, 'db', 'migrations')
+  if (existsSync(migrationsDir)) {
+    const { readdirSync } = await import('fs')
+    const files = readdirSync(migrationsDir).filter(f => f.endsWith('.js')).sort()
+    for (const file of files) {
+      const migration = await import(path.join(migrationsDir, file))
+      if (migration.migrate) await migration.migrate()
+    }
+    console.log(`✅ ${files.length} migration(s) checked`)
+  }
+} catch (e) {
+  console.error('Migration error (non-fatal):', e.message)
+}
+
 // Register routes
 fastify.register(itemsRoutes, { prefix: '/api/v1' })
 fastify.register(outfitsRoutes, { prefix: '/api/v1' })
@@ -109,9 +154,20 @@ fastify.register(inviteRoutes, { prefix: '/api/v1' })
 fastify.register(exportRoutes, { prefix: '/api/v1' })
 fastify.register(outfitTrainerRoutes, { prefix: '/api/v1' })
 
-// Health check
+// Health check (Render uses this for zero-downtime deploys)
 fastify.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() }
+  let dbOk = false
+  try {
+    const { prepare } = await import('./db/client.js')
+    const result = prepare('SELECT COUNT(*) as count FROM users').get()
+    dbOk = result != null
+  } catch {}
+  return {
+    status: dbOk ? 'ok' : 'degraded',
+    db: dbOk ? 'connected' : 'error',
+    timestamp: new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
+  }
 })
 
 // Serve mkcert CA cert for phone trust installation
@@ -152,5 +208,20 @@ const start = async () => {
     process.exit(1)
   }
 }
+
+// Graceful shutdown (Render sends SIGTERM)
+async function shutdown(signal) {
+  console.log(`\n${signal} received — shutting down gracefully...`)
+  try {
+    await fastify.close()
+    console.log('Server closed. Goodbye.')
+    process.exit(0)
+  } catch (err) {
+    console.error('Error during shutdown:', err)
+    process.exit(1)
+  }
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
 start()

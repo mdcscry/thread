@@ -6,7 +6,20 @@ import { trainModel as nnTrainModel, blendedScoreOutfit, getTrainingStats, getUs
 export default async function outfitTrainerRoutes(fastify, opts) {
   
   // Generate outfits with category filters
-  fastify.post('/outfit-trainer/generate', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  fastify.post('/outfit-trainer/generate', {
+    preHandler: [authenticateApiKey],
+    config: { rateLimit: { max: 100, timeWindow: '1 hour' } },
+    schema: {
+      body: {
+        type: 'object',
+        properties: {
+          categories: { type: 'object' },
+          occasion: { type: 'string', enum: ['casual', 'work', 'formal', 'date', 'outdoor'] },
+          count: { type: 'integer', minimum: 1, maximum: 20, default: 5 }
+        }
+      }
+    }
+  }, async (request, reply) => {
     const { userId } = request.user
     const { categories, occasion, count = 5 } = request.body || {}
 
@@ -119,7 +132,31 @@ export default async function outfitTrainerRoutes(fastify, opts) {
   })
   
   // Submit feedback
-  fastify.post('/outfit-trainer/feedback', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  fastify.post('/outfit-trainer/feedback', {
+    preHandler: [authenticateApiKey],
+    config: { rateLimit: { max: 500, timeWindow: '1 hour' } },
+    schema: {
+      body: {
+        type: 'object',
+        required: ['items'],
+        properties: {
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['itemId', 'feedback'],
+              properties: {
+                itemId: { type: 'integer' },
+                feedback: { type: 'string', enum: ['thumbs_up', 'thumbs_down'] }
+              }
+            }
+          },
+          outfitId: { type: ['integer', 'null'] },
+          context: { type: 'object' }
+        }
+      }
+    }
+  }, async (request, reply) => {
     const { userId } = request.user
     const { items, outfitId, context } = request.body
 
@@ -188,7 +225,19 @@ export default async function outfitTrainerRoutes(fastify, opts) {
   })
   
   // Exclude an item from outfit generation
-  fastify.post('/outfit-trainer/exclude', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  fastify.post('/outfit-trainer/exclude', {
+    preHandler: [authenticateApiKey],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['itemId'],
+        properties: {
+          itemId: { type: 'integer' },
+          reason: { type: 'string', maxLength: 200 }
+        }
+      }
+    }
+  }, async (request, reply) => {
     const { userId } = request.user
     const { itemId, reason } = request.body
 
@@ -227,8 +276,11 @@ export default async function outfitTrainerRoutes(fastify, opts) {
     }
   })
 
-  // Train neural network model
-  fastify.post('/outfit-trainer/train', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  // Train neural network model (expensive — strict rate limit)
+  fastify.post('/outfit-trainer/train', {
+    preHandler: [authenticateApiKey],
+    config: { rateLimit: { max: 10, timeWindow: '1 day' } }
+  }, async (request, reply) => {
     const { userId } = request.user
 
     try {

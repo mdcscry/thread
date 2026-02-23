@@ -3,24 +3,23 @@
 
 import { prepare as db, getDb, saveDb } from '../client.js'
 
+// Safe ALTER — ignores "duplicate column" errors
+function safeAlter(database, sql) {
+  try { database.run(sql) } catch (e) {
+    if (!e.message?.includes('duplicate column')) throw e
+  }
+}
+
 export async function migrate() {
   console.log('Running migration: upgrade outfit trainer to v2')
 
   const database = await getDb()
 
   // Add new columns to outfit_feedback table
-  database.run(`
-    ALTER TABLE outfit_feedback ADD COLUMN feedback_value FLOAT;
-  `)
-  database.run(`
-    ALTER TABLE outfit_feedback ADD COLUMN context_occasion TEXT;
-  `)
-  database.run(`
-    ALTER TABLE outfit_feedback ADD COLUMN context_season TEXT;
-  `)
-  database.run(`
-    ALTER TABLE outfit_feedback ADD COLUMN context_time_of_day TEXT;
-  `)
+  safeAlter(database, `ALTER TABLE outfit_feedback ADD COLUMN feedback_value FLOAT;`)
+  safeAlter(database, `ALTER TABLE outfit_feedback ADD COLUMN context_occasion TEXT;`)
+  safeAlter(database, `ALTER TABLE outfit_feedback ADD COLUMN context_season TEXT;`)
+  safeAlter(database, `ALTER TABLE outfit_feedback ADD COLUMN context_time_of_day TEXT;`)
 
   // Create item_exclusions table
   database.run(`
@@ -38,24 +37,12 @@ export async function migrate() {
   `)
 
   // Add new columns to training_sessions table
-  database.run(`
-    ALTER TABLE training_sessions ADD COLUMN feature_count INTEGER;
-  `)
-  database.run(`
-    ALTER TABLE training_sessions ADD COLUMN param_count INTEGER;
-  `)
-  database.run(`
-    ALTER TABLE training_sessions ADD COLUMN validation_loss FLOAT;
-  `)
-  database.run(`
-    ALTER TABLE training_sessions ADD COLUMN validation_mae FLOAT;
-  `)
-  database.run(`
-    ALTER TABLE training_sessions ADD COLUMN model_path TEXT;
-  `)
-  database.run(`
-    ALTER TABLE training_sessions ADD COLUMN notes TEXT;
-  `)
+  safeAlter(database, `ALTER TABLE training_sessions ADD COLUMN feature_count INTEGER;`)
+  safeAlter(database, `ALTER TABLE training_sessions ADD COLUMN param_count INTEGER;`)
+  safeAlter(database, `ALTER TABLE training_sessions ADD COLUMN validation_loss FLOAT;`)
+  safeAlter(database, `ALTER TABLE training_sessions ADD COLUMN validation_mae FLOAT;`)
+  safeAlter(database, `ALTER TABLE training_sessions ADD COLUMN model_path TEXT;`)
+  safeAlter(database, `ALTER TABLE training_sessions ADD COLUMN notes TEXT;`)
 
   // Create indexes for performance
   database.run(`CREATE INDEX IF NOT EXISTS idx_exclusions_user ON item_exclusions(user_id);`)
