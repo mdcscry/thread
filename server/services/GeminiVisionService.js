@@ -94,7 +94,7 @@ export class GeminiVisionService {
         }],
         generationConfig: {
           temperature: 0.1,       // Low temp for structured output
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
           responseMimeType: 'application/json',  // Force JSON response
         }
       })
@@ -116,17 +116,31 @@ export class GeminiVisionService {
       throw new Error('Gemini returned empty response')
     }
 
-    // Parse JSON (Gemini with responseMimeType should return clean JSON)
+    // Parse JSON — try multiple strategies
     let structured
+    const jsonStr = text.trim()
     try {
-      structured = JSON.parse(text)
+      structured = JSON.parse(jsonStr)
     } catch {
-      // Try to extract JSON from markdown code blocks
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        structured = JSON.parse(jsonMatch[1] || jsonMatch[0])
-      } else {
-        throw new Error(`Gemini returned non-JSON: ${text.slice(0, 100)}`)
+      try {
+        // Strip markdown code fences if present
+        const stripped = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '')
+        structured = JSON.parse(stripped)
+      } catch {
+        // Extract first complete JSON object with brace matching
+        const start = jsonStr.indexOf('{')
+        if (start >= 0) {
+          let depth = 0
+          let end = start
+          for (let i = start; i < jsonStr.length; i++) {
+            if (jsonStr[i] === '{') depth++
+            else if (jsonStr[i] === '}') depth--
+            if (depth === 0) { end = i + 1; break }
+          }
+          structured = JSON.parse(jsonStr.slice(start, end))
+        } else {
+          throw new Error(`Gemini returned non-JSON: ${jsonStr.slice(0, 200)}`)
+        }
       }
     }
 
