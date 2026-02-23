@@ -528,3 +528,250 @@ Run parallel generation:
 - 50% get NN-weighted
 - Compare user satisfaction metrics
 - Gradually roll out NN as confidence grows
+
+---
+
+## Implementation Decisions (Answering Open Questions)
+
+1. **How many outfits to generate?**
+   - Default: 5
+   - Max: 20
+   - Minimum to generate: 1
+
+2. **How to handle empty categories?**
+   - "Any" option in dropdown fills from available items
+   - If slot empty, outfit shows partial (just what's available)
+   - Required minimum: Top + Bottom + Footwear = valid outfit
+
+3. **Accessories - max per outfit?**
+   - Max: 2 accessories per outfit
+   - Optional - can have 0, 1, or 2
+
+4. **Feedback persistence?**
+   - Keep raw feedback for 90 days
+   - Aggregate into user preference profile after 90 days
+   - Delete raw data older than 1 year
+
+5. **Model version naming?**
+   - Semantic versioning: v1.0, v1.1, v2.0
+   - v1.x: EMA-dominant (0-50% NN)
+   - v2.x: NN-dominant (50-90% NN)
+   - v3.x: Full NN (90-100%)
+
+---
+
+## TensorFlow.js Docker Setup
+
+### Container Spec
+
+```dockerfile
+# Dockerfile.tfjs
+FROM node:20
+
+WORKDIR /app
+
+# Install TF.js
+RUN npm install @tensorflow/tfjs-node@latest
+
+# Copy training scripts
+COPY train.mjs .
+COPY models/ ./models/
+
+# Expose API port
+EXPOSE 8081
+
+# Run training server
+CMD ["node", "server.mjs"]
+```
+
+### Training Server API
+
+```
+POST /api/v1/train
+  Body: { userId, feedbackEvents: [...] }
+  Returns: { modelVersion, accuracy, loss }
+
+POST /api/v1/predict
+  Body: { userId, items: [...], context: {...} }
+  Returns: { score: 0.87 }
+
+GET /api/v1/model/:userId/status
+  Returns: { ready: true, samples: 1500, accuracy: 0.82 }
+```
+
+### Local Development
+
+```bash
+# Build
+docker build -f Dockerfile.tfjs -t thread-tfjs .
+
+# Run
+docker run -p 8081:8081 -v ./models:/app/models thread-tfjs
+
+# With GPU (if available)
+docker run --gpus all -p 8081:8081 thread-tfjs
+```
+
+---
+
+## Cold Start Strategy
+
+For new users with no feedback history:
+
+### Stage 1: Demographic-Based Defaults
+```javascript
+function getColdStartPreferences(gender, location, season) {
+  // Use population-level defaults
+  const defaults = {
+    male: {
+      casual: 0.7,
+      formal: 0.3,
+      colors: ['navy', 'black', 'gray'],
+      formality: 5
+    },
+    female: {
+      casual: 0.65,
+      formal: 0.35,
+      colors: ['black', 'white', 'beige'],
+      formality: 5
+    }
+  }
+  
+  return defaults[gender] || defaults.male
+}
+```
+
+### Stage 2: Quick Onboarding Quiz
+Ask 5-10 questions on first launch:
+- "What's your style? (Casual / Formal / Mix)"
+- "What colors do you gravitate toward?"
+- "Any brands you love/hate?"
+
+### Stage 3: Transfer Learning
+- Use pre-trained model on similar users
+- Apply user's initial feedback to fine-tune
+
+---
+
+## Privacy Considerations
+
+### Data Collection
+- All feedback stored locally (SQLite) or encrypted in transit
+- No third-party sharing
+- User can export/delete their data
+
+### GDPR/CCPA Compliance
+- Right to access: Export all user data
+- Right to deletion: "Delete my data" button
+- Data retention: 1 year max, then auto-delete
+
+### Anonymization for Model Training
+- Aggregate across users for population insights
+- Never share individual user data
+- Differential privacy for population models
+
+---
+
+## Cost Analysis
+
+### Current (EMA)
+- Storage: ~$0 (SQLite)
+- Compute: ~$0 (existing server)
+- **Cost per user: ~$0/month**
+
+### With TF.js
+- Docker container: $5-20/month (always-on small instance)
+- GPU training: $0.50/hour (on-demand)
+- Storage for models: ~$1/month
+- **Cost per user: ~$0.50-2.00/month**
+
+### Optimization
+- Train nightly (off-peak)
+- Delete models after 30 days of inactivity
+- Use CPU training (slower but cheaper)
+
+---
+
+## Success Metrics
+
+### Immediate (v1.0)
+- [ ] Users can generate outfits
+- [ ] Feedback loop works
+- [ ] EMA scores update correctly
+
+### Short-term (v1.x)
+- [ ] 100+ feedback events per active user
+- [ ] 70%+ outfits generated with feedback
+- [ ] User satisfaction > 3/5
+
+### Medium-term (v2.0)
+- [ ] NN model trained with 1000+ samples
+- [ ] 75%+ prediction accuracy on held-out data
+- [ ] User satisfaction > 4/5
+
+### Long-term (v3.0)
+- [ ] Full NN dominance (90%+)
+- [ ] Personalized per-user models
+- [ ] User satisfaction > 4.5/5
+
+### Metrics to Track
+```
+- daily_active_users
+- feedback_events_per_user
+- outfits_generated_per_day
+- thumbs_up_rate (what % are positive)
+- model_accuracy_on_validation_set
+- user_retention_30d
+- net_promoter_score
+```
+
+---
+
+## Future Enhancements
+
+### v2.1: Visual Style Transfer
+- Use CLIP or DALL-E embeddings
+- "Generate outfit that looks like this photo"
+
+### v2.2: Social Features
+- Share outfits to community
+- See what similar users wear
+- Voting on community outfits
+
+### v3.0: Advanced Context
+- Calendar integration (events, meetings)
+- Location-based suggestions (office vs outdoor)
+- Weather-aware with multi-day forecasts
+
+### v3.1: Voice Interface
+- "What should I wear today?"
+- Voice feedback: "This is great" / "Not feeling it"
+
+---
+
+## Summary
+
+This design document covers:
+
+1. ✅ Neural network architecture (user + item + context embeddings)
+2. ✅ Training pipeline (feedback → training → evaluation → deploy)
+3. ✅ UI for rapid-fire generation with feedback
+4. ✅ API endpoints for generate/feedback/train/stats
+5. ✅ EMA → NN blending strategy
+6. ✅ Cold start handling
+7. ✅ TensorFlow.js Docker setup
+8. ✅ Privacy and compliance
+9. ✅ Cost analysis
+10. ✅ Success metrics
+
+### Next Steps
+
+1. **Immediate**: Test Outfit Trainer with current wardrobe
+2. **Short**: Add more feedback signals (voice, worn log)
+3. **Medium**: Set up TF.js Docker, collect 1000+ samples
+4. **Long**: Train first NN model, start blending
+
+---
+
+*Document Version: 1.0*
+*Last Updated: 2026-02-23*
