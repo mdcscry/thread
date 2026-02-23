@@ -456,3 +456,75 @@ Categories mapped to slots:
 - Reuse existing `OutfitEngine.generateOutfits()` with category filters
 - Store feedback in new `outfit_feedback` table
 - Training = applying weighted scores to EMA, not actual model retraining
+
+---
+
+## Model Blending: EMA → Neural Network
+
+As the NN gets trained, it should gradually take over from EMA.
+
+### Transition Formula
+
+```
+final_score = (1 - nn_weight) * ema_score + nn_weight * nn_score
+```
+
+### Training Stages
+
+| Stage | EMA Weight | NN Weight | Description |
+|-------|-----------|-----------|-------------|
+| v1.0 | 100% | 0% | Pure EMA, collecting feedback |
+| v1.1-v1.x | 80-95% | 5-20% | NN getting trained, low confidence |
+| v2.0 | 50% | 50% | First trained NN, balanced |
+| v2.1+ | 20-40% | 60-80% | NN dominant, EMA as fallback |
+| v3.0 | 0% | 100% | Full NN (if desired) |
+
+### Determining NN Weight
+
+```javascript
+function getNnWeight(trainingSamples, validationAccuracy) {
+  // Weight based on training data size
+  const dataWeight = Math.min(trainingSamples / 1000, 0.5)  // Max 50% from data size
+  
+  // Weight based on validation accuracy
+  const accuracyWeight = validationAccuracy > 0.7 
+    ? (validationAccuracy - 0.7) * 1.5  // 0-45% from accuracy
+    : 0
+  
+  // Minimum 5% NN once we have any training
+  const nnWeight = Math.max(0.05, dataWeight + accuracyWeight)
+  
+  return Math.min(nnWeight, 0.95)  // Never go above 95%
+}
+
+// Usage in outfit generation
+async function scoreOutfit(userId, items, context) {
+  const emaScore = getEmaScore(items)  // Current EMA
+  
+  let nnScore = 0.5  // Default (neutral)
+  if (nnModelReady) {
+    nnScore = await nnPredict(userId, items, context)
+  }
+  
+  const nnWeight = getNnWeight(trainingSamples, accuracy)
+  const finalScore = (1 - nnWeight) * emaScore + nnWeight * nnScore
+  
+  return finalScore
+}
+```
+
+### Confidence Signals
+
+The NN should signal its confidence:
+- **High confidence** (>1000 samples, >80% accuracy): NN can dominate
+- **Medium confidence** (500-1000 samples, 70-80%): Blend 50/50
+- **Low confidence** (<500 samples): NN only 5-10%, EMA dominant
+- **No training**: NN = 0%, pure EMA
+
+### A/B Testing During Transition
+
+Run parallel generation:
+- 50% users get EMA-weighted
+- 50% get NN-weighted
+- Compare user satisfaction metrics
+- Gradually roll out NN as confidence grows
