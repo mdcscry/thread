@@ -4,25 +4,39 @@ const API_BASE = ''
 
 // Category options for clothing items
 const CATEGORIES = [
-  // Tops
+  // Tops - Mens
   'T-Shirt',
   'Button-Up', 
   'Knitwear',
   'Hoodie',
   'Jacket',
+  // Tops - Womens
+  'Blouse',
+  'Dress',
+  'Tank',
+  'Camisole',
   // Bottoms
   'Jeans',
   'Pants',
+  'Skirts',
   'Shorts',
+  'Leggings',
   // Footwear
   'Boots',
   'Sneakers',
   'Shoes',
   'Sandals',
+  'Heels',
+  'Flats',
   // Accessories
   'Belt',
   'Hat',
+  'Scarf',
   'Socks',
+  'Necklace',
+  'Earrings',
+  'Bracelet',
+  'Handbag',
   // Other
   'Other'
 ]
