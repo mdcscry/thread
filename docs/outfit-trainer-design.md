@@ -6,9 +6,15 @@ A feature for rapid-fire outfit generation with feedback-based learning. Users c
 1. Generate multiple outfit combinations instantly
 2. Preview complete outfits with category selection
 3. Give per-item feedback (thumbs up/down/neutral)
-4. "Train" the model (apply feedback to preferences)
+4. "Train" the neural network (learn from feedback)
 
-## Current State (What Already Exists)
+## ML Architecture
+
+### The Goal
+
+Build a neural network that learns user fashion preferences and generates personalized outfit recommendations.
+
+### Current State (What Already Exists)
 
 ### PreferenceService
 - EMA (Exponential Moving Average) scoring per item
@@ -23,6 +29,216 @@ A feature for rapid-fire outfit generation with feedback-based learning. Users c
 - Generates outfits from wardrobe items
 - Considers occasion, weather, time of day
 - Returns outfit combinations
+
+---
+
+## Neural Network Specification
+
+### Architecture: Collaborative Filtering + Content-Based Hybrid
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    THREAD NEURAL NETWORK                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐          │
+│  │   USER       │    │    ITEM      │    │   CONTEXT    │          │
+│  │  EMBEDDING   │    │  EMBEDDING   │    │  EMBEDDING   │          │
+│  │              │    │              │    │              │          │
+│  │  - style_prefs│    │  - category │    │  - weather   │          │
+│  │  - color_pref │    │  - colors   │    │  - occasion  │          │
+│  │  - fit_pref  │    │  - pattern  │    │  - time      │          │
+│  │  - brand_aff │    │  - material │    │  - location  │          │
+│  │  - formality │    │  - brand    │    │  - season    │          │
+│  │              │    │  - ema_score│    │              │          │
+│  │  [64 dims]   │    │  [128 dims] │    │  [32 dims]   │          │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘          │
+│         │                   │                   │                    │
+│         └───────────────────┼───────────────────┘                    │
+│                             ▼                                        │
+│                    ┌───────────────┐                                 │
+│                    │    CONCAT     │                                 │
+│                    │   [224 dims]  │                                 │
+│                    └───────┬───────┘                                 │
+│                            ▼                                        │
+│                    ┌───────────────┐                                 │
+│                    │  DENSE LAYERS │                                │
+│                    │  224 → 128 → 64                              │
+│                    │  ReLU, Dropout                                 │
+│                    └───────┬───────┘                                 │
+│                            ▼                                        │
+│                    ┌───────────────┐                                 │
+│                    │   OUTPUT       │                                │
+│                    │  [1]           │                                │
+│                    │  Sigmoid       │                                │
+│                    │  (0-1 score)  │                                │
+│                    └───────────────┘                                 │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Training Data Schema
+
+```sql
+-- Raw feedback events (training data)
+CREATE TABLE training_events (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  
+  -- Input features
+  user_style_vector FLOAT[],      -- [64] user style preference
+  item_category INTEGER,           -- category_id
+  item_color_vector FLOAT[],      -- [6] RGB + hsl
+  item_pattern TEXT,
+  item_material TEXT,
+  item_brand TEXT,
+  item_ema_score FLOAT,           -- existing score
+  
+  -- Context
+  context_weather TEXT,
+  context_occasion TEXT,
+  context_time_of_day TEXT,
+  context_season TEXT,
+  context_location TEXT,
+  
+  -- Target
+  feedback_type TEXT NOT NULL,    -- 'thumbs_up', 'thumbs_down', 'worn', 'skipped'
+  feedback_value FLOAT NOT NULL,  -- 1.0, -0.8, 1.0, -0.2 etc
+  
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User preference profile (learned)
+CREATE TABLE user_preference_profiles (
+  user_id INTEGER PRIMARY KEY,
+  style_vector FLOAT[],           -- [64] learned style preferences
+  color_preferences FLOAT[],      -- [12] preferred colors
+  formality_score FLOAT,           -- 0-10 scale
+  brand_affinities JSON,          -- {brand_name: score}
+  fit_preference TEXT,            -- 'slim', 'regular', 'loose'
+  model_version TEXT,            -- 'v1.0', 'v1.1'
+  last_trained_at DATETIME,
+  training_samples INTEGER        -- how many feedback events used
+);
+
+-- Model versions
+CREATE TABLE model_versions (
+  id INTEGER PRIMARY KEY,
+  version TEXT NOT NULL,          -- 'v1.0'
+  architecture JSON,              -- model config
+  accuracy_score FLOAT,           -- validation accuracy
+  trained_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  notes TEXT
+);
+```
+
+### Feedback Signal Taxonomy
+
+| Signal | Source | Value | Confidence |
+|--------|--------|-------|------------|
+| `thumbs_up` | Outfit Trainer | +1.0 | High |
+| `thumbs_down` | Outfit Trainer | -1.0 | High |
+| `neutral` | Outfit Trainer | 0.0 | None |
+| `exclude` | Outfit Trainer | -0.5 | Medium |
+| `worn_confirmed` | Calendar/log | +1.0 | Very High |
+| `voice_positive` | Voice feedback | +0.8 | High |
+| `voice_negative` | Voice feedback | -0.7 | High |
+| `saved_outfit` | User saved | +0.6 | Medium |
+| `viewed_long` | Passive | +0.2 | Low |
+| `skipped_repeated` | Passive | -0.3 | Low |
+
+### Training Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TRAINING PIPELINE                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. COLLECT FEEDBACK                                          │
+│     └── User interactions → training_events                     │
+│                                                                  │
+│  2. PREPROCESS                                                │
+│     ├── Normalize embeddings                                   │
+│     ├── Encode categoricals                                    │
+│     └── Balance classes (upsample minority)                    │
+│                                                                  │
+│  3. TRAIN (TF.js in Docker)                                  │
+│     ├── Split: 80% train / 20% validation                    │
+│     ├── Optimizer: Adam (lr=0.001)                            │
+│     ├── Loss: Binary Crossentropy                              │
+│     ├── Epochs: 50-100                                        │
+│     └── Early stopping: patience=5                             │
+│                                                                  │
+│  4. EVALUATE                                                  │
+│     ├── Accuracy, Precision, Recall, F1                        │
+│     ├── A/B test vs baseline (random/heuristic)              │
+│     └── User satisfaction surveys                               │
+│                                                                  │
+│  5. DEPLOY                                                    │
+│     ├── Save model weights                                     │
+│     ├── Update model_versions table                            │
+│     ├── User preference profiles update                        │
+│     └── Canary deploy to subset of users                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Inference
+
+```javascript
+// Generate outfit score
+async function scoreOutfit(userId, items, context) {
+  // 1. Get user preference profile
+  const profile = await db.getUserProfile(userId)
+  
+  // 2. Get item embeddings
+  const itemEmbeddings = await Promise.all(
+    items.map(item => getItemEmbedding(item))
+  )
+  
+  // 3. Get context embedding
+  const contextEmbedding = getContextEmbedding(context)
+  
+  // 4. Run inference
+  const input = concat([
+    profile.style_vector,
+    ...itemEmbeddings,
+    contextEmbedding
+  ])
+  
+  const score = await tfModel.predict(input)
+  return score  // 0-1 probability
+}
+
+// Generate multiple combos, rank by score
+async function generateOutfits(userId, availableItems, context, n = 5) {
+  const combos = generateCombinations(availableItems)
+  const scored = await Promise.all(
+    combos.map(combo => ({
+      combo,
+      score: scoreOutfit(userId, combo.items, context)
+    }))
+  )
+  
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n)
+}
+```
+
+### User Preference Learning
+
+The model learns these dimensions:
+
+| Dimension | Examples | How Learned |
+|-----------|----------|-------------|
+| **Style** | casual, formal, edgy, classic | Thumbs up/down on outfits |
+| **Colors** | navy, black, earth tones | Which colors appear in liked items |
+| **Formality** | 1-10 scale | Occasion-based feedback |
+| **Brands** | preferred brands | Repeated selection of brand |
+| **Fit** | slim, regular, loose | Feedback on specific items |
+| **Layers** | single, layered, weather-appropriate | Weather + choice correlation |
+| **Accessories** | minimal, statement | Feedback on accessory items |
 
 ---
 
