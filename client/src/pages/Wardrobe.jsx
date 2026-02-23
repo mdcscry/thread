@@ -2,7 +2,30 @@ import React, { useState, useEffect } from 'react'
 
 const API_BASE = ''
 
-const CATEGORIES = ['top', 'knitwear', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'activewear']
+// Category options for clothing items
+const CATEGORIES = [
+  // Tops
+  'T-Shirt',
+  'Button-Up', 
+  'Sweater',
+  'Hoodie',
+  'Jacket',
+  // Bottoms
+  'Jeans',
+  'Pants',
+  'Shorts',
+  // Footwear
+  'Boots',
+  'Sneakers',
+  'Shoes',
+  'Sandals',
+  // Accessories
+  'Belt',
+  'Hat',
+  'Socks',
+  // Other
+  'Other'
+]
 const COLORS = ['black', 'white', 'gray', 'navy', 'blue', 'red', 'green', 'brown', 'beige', 'pink', 'purple', 'orange', 'yellow']
 const PATTERNS = ['solid', 'striped', 'plaid', 'floral', 'geometric', 'animal', 'textured', 'graphic']
 const MATERIALS = ['cotton', 'wool', 'silk', 'linen', 'polyester', 'denim', 'leather', 'knit', 'synthetic', 'cashmere']
