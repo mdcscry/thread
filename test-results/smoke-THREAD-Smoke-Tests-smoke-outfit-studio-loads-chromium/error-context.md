@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: THREAD
+      - generic [ref=e7]: · User One
+    - navigation [ref=e8]:
+      - link "👗" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "✨" [active] [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "📷" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+      - link "✈️" [ref=e12] [cursor=pointer]:
+        - /url: "#"
+      - link "👥" [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - link "📥" [ref=e14] [cursor=pointer]:
+        - /url: "#"
+      - link "⚙️" [ref=e15] [cursor=pointer]:
+        - /url: "#"
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - heading "✨ Outfit Studio" [level=1] [ref=e18]
+      - generic [ref=e19]:
+        - button "💬 Describe outfit" [ref=e20] [cursor=pointer]
+        - button "👕 Start with an item" [ref=e21] [cursor=pointer]
+      - generic [ref=e23]:
+        - generic [ref=e24]: 🌫️
+        - generic [ref=e25]:
+          - generic [ref=e26]: 42°F
+          - generic [ref=e27]: overcast
+      - generic [ref=e28]:
+        - textbox "What do you want to wear? e.g., 'Something cute for brunch with my girls, it's going to be warm'" [ref=e29]
+        - generic [ref=e30]:
+          - generic [ref=e31]: "💡 Try: \"Dinner date, 60s vibe\" or \"Work meeting but make it fashion\""
+          - button "✨ Generate" [disabled] [ref=e32] [cursor=pointer]
+      - generic [ref=e33]:
+        - generic [ref=e34]: ✨
+        - paragraph [ref=e35]: Describe what you want to wear and I'll generate some options!
+```

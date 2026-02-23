@@ -1,0 +1,68 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: THREAD
+      - generic [ref=e7]: · User One
+    - navigation [ref=e8]:
+      - link "👗" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "✨" [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "📷" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+      - link "✈️" [active] [ref=e12] [cursor=pointer]:
+        - /url: "#"
+      - link "👥" [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - link "📥" [ref=e14] [cursor=pointer]:
+        - /url: "#"
+      - link "⚙️" [ref=e15] [cursor=pointer]:
+        - /url: "#"
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - heading "✈️ Vacation Packer" [level=1] [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - heading "Plan Your Trip" [level=3] [ref=e21]
+          - generic [ref=e22]:
+            - generic [ref=e23]: Trip Name
+            - textbox "Paris Summer Trip" [ref=e24]
+          - generic [ref=e25]:
+            - generic [ref=e26]: Destination
+            - textbox "Paris, France" [ref=e27]
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - generic [ref=e30]: Start Date
+              - textbox [ref=e31]
+            - generic [ref=e32]:
+              - generic [ref=e33]: End Date
+              - textbox [ref=e34]
+          - generic [ref=e35]:
+            - generic [ref=e36]: Climate
+            - combobox [ref=e37]:
+              - option "Hot"
+              - option "Warm"
+              - option "Mild" [selected]
+              - option "Cold"
+              - option "Variable"
+          - generic [ref=e38]:
+            - generic [ref=e39]: Max Items to Pack
+            - spinbutton [ref=e40]: "12"
+          - generic [ref=e41]:
+            - generic [ref=e42]: Activities
+            - generic [ref=e43]:
+              - button "beach" [ref=e44] [cursor=pointer]
+              - button "casual" [ref=e45] [cursor=pointer]
+              - button "dining" [ref=e46] [cursor=pointer]
+              - button "hiking" [ref=e47] [cursor=pointer]
+              - button "sightseeing" [ref=e48] [cursor=pointer]
+              - button "nightlife" [ref=e49] [cursor=pointer]
+              - button "business" [ref=e50] [cursor=pointer]
+          - button "🎯 Optimize Packing List" [ref=e51] [cursor=pointer]
+        - generic [ref=e53]:
+          - generic [ref=e54]: ✈️
+          - paragraph [ref=e55]: Tell us about your trip and we'll optimize your packing list for maximum outfit variety!
+```

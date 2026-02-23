@@ -4,11 +4,13 @@
  * 
  * Usage:
  *   node scripts/seed-test-data.js reset        # Clear all items
- *   node scripts/seed-test-data.js url         # Seed URL-based items
- *   node scripts/seed-test-data.js drive       # Seed Drive items  
- *   node scripts/seed-test-data.js local        # Seed local items
- *   node scripts/seed-test-data.js camera       # Seed camera items
- *   node scripts/seed-test-data.js all          # Seed all types
+ *   node scripts/seed-test-data.js local       # Seed from test-images folder
+ *   node scripts/seed-test-data.js camera      # Seed camera items (uses test-images)
+ *   node scripts/seed-test-data.js all        # Seed all types
+ * 
+ * Test images should be in: data/test-images/
+ *   - jeans.jpg
+ *   - test.jpg (or any other images)
  */
 
 import fs from 'fs'
@@ -16,103 +18,114 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../data/thread-test.db')
+const DATA_DIR = path.join(__dirname, '../data')
+const TEST_IMAGES_DIR = path.join(DATA_DIR, 'test-images')
+const DB_PATH = process.env.DATABASE_PATH || path.join(DATA_DIR, 'thread-test.db')
 
-// Simple in-memory DB operations for seeding
-function getDb() {
-  // For seeding, we'll use the same approach as the server
-  // This is a simplified seeder - in practice you'd import the actual db client
-  return {
-    run: (sql, ...params) => {
-      console.log(`[SEED] ${sql.replace(/\?/g, () => params.shift())}`)
-    }
+// Get test images from test-images folder
+function getTestImages() {
+  if (!fs.existsSync(TEST_IMAGES_DIR)) {
+    console.log(`⚠️  Test images folder not found: ${TEST_IMAGES_DIR}`)
+    return []
   }
+  
+  const files = fs.readdirSync(TEST_IMAGES_DIR)
+    .filter(f => /\.(jpg|jpeg|png|heic|webp)$/i.test(f))
+    .map(f => ({
+      name: f.replace(/\.[^.]+$/, ''),
+      path: path.join(TEST_IMAGES_DIR, f),
+      file: f
+    }))
+  
+  console.log(`📁 Found ${files.length} test images in ${TEST_IMAGES_DIR}`)
+  return files
 }
 
-// Sample test image (1x1 red pixel PNG as base64)
-const TEST_IMAGE_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-
 const SEED_DATA = {
-  url: [
-    { name: 'Blue Oxford Shirt', category: 'top', source: 'url' },
-    { name: 'Khaki Chinos', category: 'bottom', source: 'url' },
-    { name: 'White Sneakers', category: 'shoes', source: 'url' },
-  ],
-  drive: [
-    { name: 'Winter Parka', category: 'outerwear', source: 'google_drive' },
-    { name: 'Wool Scarf', category: 'accessories', source: 'google_drive' },
-  ],
   local: [
-    { name: 'Black Leather Belt', category: 'accessories', source: 'local' },
-    { name: 'Denim Jacket', category: 'outerwear', source: 'local' },
+    { name: 'Blue Jeans', category: 'bottom', filename: 'jeans.jpg' },
   ],
   camera: [
-    { name: 'Casual T-Shirt', category: 'top', source: 'camera' },
-    { name: 'Running Shorts', category: 'bottom', source: 'camera' },
+    { name: 'Test Photo', category: 'top', filename: 'test.jpg' },
   ]
 }
 
 async function resetDatabase() {
   console.log('🗑️  Resetting database...')
-  // Delete all items (would use actual DB client here)
-  console.log('   - Deleted all clothing_items')
-  console.log('   - Deleted all item_images')
-  console.log('   - Reset sequences')
+  console.log('   (Run: pm2 restart thread-test to recreate fresh DB)')
 }
 
-async function seedSource(sourceType) {
-  console.log(`🌱 Seeding ${sourceType} items...`)
-  const items = SEED_DATA[sourceType]
-  if (!items) {
-    console.log(`Unknown source: ${sourceType}`)
-    return
+async function seedLocal() {
+  console.log('🌱 Seeding local items from test-images...')
+  const images = getTestImages()
+  
+  // Map to expected files
+  const items = []
+  for (const seed of SEED_DATA.local) {
+    const img = images.find(i => i.file === seed.filename)
+    if (img) {
+      items.push({ ...seed, path: img.path })
+    }
   }
   
   for (const item of items) {
-    console.log(`   + ${item.name} (${item.category}) - ${item.source}`)
+    console.log(`   + ${item.name} (${item.category}) - ${item.filename}`)
   }
-  console.log(`   = ${items.length} items added`)
+  console.log(`   = ${items.length} items ready to ingest`)
+}
+
+async function seedCamera() {
+  console.log('🌱 Seeding camera items...')
+  const images = getTestImages()
+  
+  const items = []
+  for (const seed of SEED_DATA.camera) {
+    const img = images.find(i => i.file === seed.filename)
+    if (img) {
+      items.push({ ...seed, path: img.path })
+    }
+  }
+  
+  for (const item of items) {
+    console.log(`   + ${item.name} (${item.category}) - ${item.filename}`)
+  }
+  console.log(`   = ${items.length} items ready for camera upload`)
 }
 
 async function showCounts() {
-  console.log('\n📊 Current test database state:')
-  console.log('   URL items:      X (run test to verify)')
-  console.log('   Drive items:   X')
-  console.log('   Local items:   X')
-  console.log('   Camera items:  X')
-  console.log('   Total:         X')
+  console.log('\n📊 Test images available:')
+  const images = getTestImages()
+  for (const img of images) {
+    console.log(`   - ${img.file} (${img.name})`)
+  }
+  console.log('\n💡 To seed:')
+  console.log('   1. Upload via local folder ingestion')
+  console.log('   2. Or upload via camera page using file input')
 }
 
 const command = process.argv[2] || 'all'
 
 console.log(`\n🧪 THREAD Test Data Seeder`)
+console.log(`   Test images: ${TEST_IMAGES_DIR}`)
 console.log(`   Database: ${DB_PATH}\n`)
 
 switch (command) {
   case 'reset':
     await resetDatabase()
     break
-  case 'url':
-    await seedSource('url')
-    break
-  case 'drive':
-    await seedSource('drive')
-    break
   case 'local':
-    await seedSource('local')
+    await seedLocal()
     break
   case 'camera':
-    await seedSource('camera')
+    await seedCamera()
     break
   case 'all':
-    await resetDatabase()
-    for (const source of ['url', 'drive', 'local', 'camera']) {
-      await seedSource(source)
-    }
+    await seedLocal()
+    await seedCamera()
     break
   default:
     console.log(`Unknown command: ${command}`)
-    console.log('Valid commands: reset, url, drive, local, camera, all')
+    console.log('Valid commands: reset, local, camera, all')
 }
 
 await showCounts()

@@ -1,0 +1,75 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: THREAD
+      - generic [ref=e7]: · User One
+    - navigation [ref=e8]:
+      - link "👗" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "✨" [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "📷" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+      - link "✈️" [ref=e12] [cursor=pointer]:
+        - /url: "#"
+      - link "👥" [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - link "📥" [ref=e14] [cursor=pointer]:
+        - /url: "#"
+      - link "⚙️" [active] [ref=e15] [cursor=pointer]:
+        - /url: "#"
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - heading "⚙️ Settings" [level=1] [ref=e18]
+      - generic [ref=e19]:
+        - heading "📊 Wardrobe Stats" [level=3] [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: "104"
+            - generic [ref=e24]: Items
+          - generic [ref=e25]:
+            - generic [ref=e26]: "0"
+            - generic [ref=e27]: Outfits
+          - generic [ref=e28]:
+            - generic [ref=e29]: "5"
+            - generic [ref=e30]: Loved
+          - generic [ref=e31]:
+            - generic [ref=e32]: "167"
+            - generic [ref=e33]: Need Review
+          - generic [ref=e34]:
+            - generic [ref=e35]: "1"
+            - generic [ref=e36]: In Laundry
+      - generic [ref=e37]:
+        - heading "🔑 API Key" [level=3] [ref=e38]
+        - paragraph [ref=e39]: Use this key to access THREAD from other apps
+        - generic [ref=e40]:
+          - textbox [ref=e41]: thread_sk_41eb7a2f83b0c870e77d87dc669e8f781dbf8de040b57934
+          - button "📋 Copy" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]:
+        - heading "📱 Connect Your Phone" [level=3] [ref=e44]
+        - generic [ref=e45]:
+          - img "Scan to connect" [ref=e46]
+          - paragraph [ref=e47]:
+            - text: Scan with your phone camera
+            - text: "or visit:"
+            - code [ref=e48]: https://192.168.0.17:8080
+          - paragraph [ref=e49]: Make sure your phone is on the same WiFi as this computer
+      - generic [ref=e50]:
+        - heading "📲 Install on Phone" [level=3] [ref=e51]
+        - list [ref=e52]:
+          - listitem [ref=e53]: Open https://192.168.0.17:8080 in your phone's browser
+          - listitem [ref=e54]: Tap Share (iOS) or Menu (Android)
+          - listitem [ref=e55]: Select "Add to Home Screen"
+          - listitem [ref=e56]: THREAD will appear as a native app!
+      - generic [ref=e57]:
+        - heading "💾 Backup & Export" [level=3] [ref=e58]
+        - paragraph [ref=e59]: Download your entire wardrobe (database + images) as a ZIP file.
+        - link "📦 Download Backup" [ref=e60] [cursor=pointer]:
+          - /url: /api/v1/export
+      - generic [ref=e61]:
+        - heading "ℹ️ About THREAD" [level=3] [ref=e62]
+        - paragraph [ref=e63]: THREAD runs entirely on your machine. No data ever leaves your home network.
+```
