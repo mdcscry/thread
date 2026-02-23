@@ -39,7 +39,7 @@ case $ACTION in
     # Restart test server
     pm2 restart thread-test
     echo -e "${GREEN}QA deployed!${NC}"
-    echo "Test server: https://localhost:3002"
+    echo "Test server: https://localhost:4000"
     ;;
 
   promote)

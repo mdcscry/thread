@@ -50,7 +50,7 @@ jobs:
       - name: Start test server
         run: |
           cp data/thread.db data/thread-test.db
-          PORT=3002 DATABASE_PATH=${{ github.workspace }}/data/thread-test.db node server/index.js &
+          PORT=4000 DATABASE_PATH=${{ github.workspace }}/data/thread-test.db node server/index.js &
           sleep 5
 
       - name: Run Playwright tests
@@ -71,7 +71,7 @@ jobs:
     if: github.ref == 'refs/heads/qa' && github.event_name == 'push'
     environment:
       name: qa
-      url: https://localhost:3002
+      url: https://localhost:4000
     
     steps:
       - name: Checkout code

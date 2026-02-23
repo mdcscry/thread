@@ -161,7 +161,7 @@ No CLA, no corporate process. Just make it better and share.
 | Branch | URL | Database | Purpose |
 |--------|-----|----------|---------|
 | `main` | https://localhost:3000 | `thread.db` | Production |
-| `qa` | https://localhost:3002 | `thread-test.db` | Development & Testing |
+| `qa` | https://localhost:4000 | `thread-test.db` | Development & Testing |
 
 ### Setup
 
@@ -170,10 +170,10 @@ No CLA, no corporate process. Just make it better and share.
 cp data/thread.db data/thread-test.db
 
 # Start test server (qa branch)
-PORT=3002 DATABASE_PATH=$(pwd)/data/thread-test.db pm2 start "node server/index.js" --name thread-test
+PORT=4000 DATABASE_PATH=$(pwd)/data/thread-test.db pm2 start "node server/index.js" --name thread-test
 
 # Configure Playwright for test server
-# (playwright.config.js already set to port 3002)
+# (playwright.config.js already set to port 4000)
 ```
 
 ### Workflow
