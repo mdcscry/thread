@@ -2,19 +2,43 @@ import React, { useState, useEffect } from 'react'
 
 const API_BASE = ''
 
-// Category options for clothing items
-const CATEGORIES = [
-  // Tops - Mens
+// Mens categories
+const MENS_CATEGORIES = [
+  // Tops
   'T-Shirt',
   'Button-Up', 
   'Knitwear',
   'Hoodie',
   'Jacket',
-  // Tops - Womens
+  // Bottoms
+  'Jeans',
+  'Pants',
+  'Shorts',
+  // Footwear
+  'Boots',
+  'Sneakers',
+  'Shoes',
+  'Sandals',
+  // Accessories
+  'Belt',
+  'Hat',
+  'Socks',
+  // Other
+  'Other'
+]
+
+// Womens categories
+const WOMENS_CATEGORIES = [
+  // Tops
+  'T-Shirt',
+  'Button-Up', 
   'Blouse',
-  'Dress',
+  'Knitwear',
+  'Hoodie',
+  'Jacket',
   'Tank',
   'Camisole',
+  'Dress',
   // Bottoms
   'Jeans',
   'Pants',
@@ -40,13 +64,24 @@ const CATEGORIES = [
   // Other
   'Other'
 ]
+
+// Get categories based on gender
+function getCategories(gender) {
+  const g = gender?.toLowerCase()
+  if (g === 'woman' || g === 'f' || g === 'female') return WOMENS_CATEGORIES
+  if (g === 'man' || g === 'm' || g === 'male') return MENS_CATEGORIES
+  // Default to mens if unknown
+  return MENS_CATEGORIES
+}
+
 const COLORS = ['black', 'white', 'gray', 'navy', 'blue', 'red', 'green', 'brown', 'beige', 'pink', 'purple', 'orange', 'yellow']
 const PATTERNS = ['solid', 'striped', 'plaid', 'floral', 'geometric', 'animal', 'textured', 'graphic']
 const MATERIALS = ['cotton', 'wool', 'silk', 'linen', 'polyester', 'denim', 'leather', 'knit', 'synthetic', 'cashmere']
 const SEASONS = ['spring', 'summer', 'fall', 'winter']
 const OCCASIONS = ['casual', 'work', 'evening', 'sporty', 'boho', 'edgy', 'classic', 'romantic']
 
-export default function Wardrobe({ apiKey }) {
+export default function Wardrobe({ apiKey, userId, gender }) {
+  const CATEGORIES = getCategories(gender)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')

@@ -49,7 +49,7 @@ export default function App() {
 
     switch (page) {
       case 'wardrobe':
-        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} />
+        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} gender={currentUser?.gender} />
       case 'outfits':
         return <OutfitStudio apiKey={apiKey} userId={currentUser?.id} />
       case 'ingestion':
@@ -63,7 +63,7 @@ export default function App() {
       case 'settings':
         return <Settings apiKey={apiKey} onApiKeyChange={handleApiKeyChange} />
       default:
-        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} />
+        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} gender={currentUser?.gender} />
     }
   }
 
