@@ -1,7 +1,12 @@
 import fetch from 'node-fetch'
 import sharp from 'sharp'
+import { execSync } from 'child_process'
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+
+// MiniMax MCP configuration
+const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || 'sk-cp-gfNN3qGjSMWCHmbDyFs3Mpc4PV48d3RDsf5siq_v_KBGEyR38WMtGaZhZUWLdZLbdBa_pdZiTtcJ5TALzyo1XfeIWM1TOzjNbcQjLqDaU4HgeUbZ0f8qji8'
+const MINIMAX_API_HOST = process.env.MINIMAX_API_HOST || 'https://api.minimax.io'
 
 export class OllamaService {
   constructor(model = null) {
@@ -74,72 +79,78 @@ export class OllamaService {
   }
 
   async analyzeImageStructured(imagePath) {
-    const stage1Prompt = `You are a professional fashion analyst. Examine this clothing item carefully.
-Describe what you see in detail: the type of garment, its color(s), pattern,
-material if you can determine it, texture, approximate weight/thickness,
-how it would fit on a body, and any notable design details.
-Be precise and factual. If you are uncertain about something, say so explicitly.`
+    // Use MiniMax MCP for faster, better image analysis
+    // Just get a description and extract structured data from it
+    const prompt = `Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit (tight/slim/regular/relaxed/loose/oversized), silhouette, style tags.`
 
-    const stage2Prompt = `Based on your description, output a JSON object with exactly these fields.
-Use null for any field you cannot determine confidently. Use "uncertain" for
-fields where you're making an educated guess.
-
-{
-  "category": "top|bottom|dress|outerwear|shoes|bag|accessory|activewear",
-  "subcategory": "specific type",
-  "primary_color": "single dominant color name",
-  "secondary_color": "second color if present, else null",
-  "weft_color": "inner/weft color for denim/fabrics with visible texture, else null",
-  "colors": ["all colors present"],
-  "pattern": "solid|striped|floral|plaid|geometric|animal|graphic|textured|other",
-  "material": "cotton|wool|silk|linen|polyester|denim|leather|knit|synthetic|unknown",
-  "texture": "smooth|ribbed|knit|woven|sheer|velvet|terry|denim|leather|other",
-  "silhouette": "fitted|relaxed|oversized|structured|flowy|boxy",
-  "fit": "tight|slim|regular|relaxed|loose|oversized",
-  "length": "crop|short|regular|midi|maxi|null",
-  "style_tags": ["casual","office","evening","sporty","boho","edgy","classic","romantic"],
-  "season": ["spring","summer","fall","winter"],
-  "weight": "lightweight|medium|heavyweight",
-  "temp_min_f": 45,
-  "temp_max_f": 85,
-  "formality": 5,
-  "confidence": 0.85,
-  "uncertain_fields": []
-}
-
-Output only valid JSON. No explanation, no markdown.`
-
+    let result
     try {
-      // Stage 1: Raw description
-      const stage1Result = await this.analyzeImage(imagePath, stage1Prompt)
-      const rawDescription = stage1Result.response
-
-      // Stage 2: Structured extraction
-      const stage2Result = await this.analyzeImage(imagePath, stage2Prompt)
-      
-      // Parse JSON from response
-      let structured
-      try {
-        structured = JSON.parse(stage2Result.response)
-      } catch {
-        // Try to extract JSON from text
-        const jsonMatch = stage2Result.response.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          structured = JSON.parse(jsonMatch[0])
-        } else {
-          throw new Error('Failed to parse structured response')
-        }
-      }
-
-      return {
-        rawDescription,
-        structured,
-        model: this.model
-      }
+      // Use MiniMax MCP via mcporter
+      result = await this.analyzeImageWithMiniMax(imagePath, prompt)
     } catch (error) {
-      console.error('Analysis error:', error)
+      console.error('MiniMax analysis failed:', error.message)
       throw error
     }
+    
+    // Result is text description - store as raw
+    const rawDescription = typeof result === 'string' ? result : JSON.stringify(result)
+    
+    // Extract basic structured data from the description
+    const lowerDesc = rawDescription.toLowerCase()
+    const structured = {
+      category: this.extractCategory(lowerDesc),
+      primary_color: this.extractColor(lowerDesc),
+      material: this.extractMaterial(lowerDesc),
+      fit: this.extractFit(lowerDesc),
+      pattern: this.extractPattern(lowerDesc),
+    }
+
+    return {
+      rawDescription,
+      structured,
+      model: 'minimax-mcp'
+    }
+  }
+  
+  // Helper methods to extract structured data from description
+  extractCategory(desc) {
+    if (desc.includes('jeans') || desc.includes('denim') || desc.includes('pants')) return 'bottom'
+    if (desc.includes('shirt') || desc.includes('blouse') || desc.includes('sweater') || desc.includes('t-shirt') || desc.includes('top')) return 'top'
+    if (desc.includes('jacket') || desc.includes('coat') || desc.includes('hoodie')) return 'outerwear'
+    if (desc.includes('shoes') || desc.includes('sneakers') || desc.includes('boots')) return 'shoes'
+    if (desc.includes('dress')) return 'dress'
+    return 'unknown'
+  }
+  
+  extractColor(desc) {
+    const colors = ['black', 'white', 'blue', 'navy', 'indigo', 'gray', 'grey', 'brown', 'tan', 'beige', 'red', 'green', 'olive', 'khaki']
+    for (const c of colors) {
+      if (desc.includes(c)) return c
+    }
+    return 'unknown'
+  }
+  
+  extractMaterial(desc) {
+    const materials = ['cotton', 'wool', 'silk', 'linen', 'polyester', 'denim', 'leather', 'knit', 'synthetic']
+    for (const m of materials) {
+      if (desc.includes(m)) return m
+    }
+    return 'unknown'
+  }
+  
+  extractFit(desc) {
+    if (desc.includes('tight') || desc.includes('slim')) return 'slim'
+    if (desc.includes('relaxed') || desc.includes('loose') || desc.includes('oversized')) return 'loose'
+    if (desc.includes('regular')) return 'regular'
+    return 'unknown'
+  }
+  
+  extractPattern(desc) {
+    if (desc.includes('striped')) return 'striped'
+    if (desc.includes('plaid') || desc.includes('check')) return 'plaid'
+    if (desc.includes('solid')) return 'solid'
+    if (desc.includes('pattern') || desc.includes('textured')) return 'textured'
+    return 'solid'
   }
 
   async generateText(prompt) {
@@ -159,6 +170,62 @@ Output only valid JSON. No explanation, no markdown.`
 
     const data = await response.json()
     return data.response
+  }
+
+  // Use MiniMax MCP via mcporter for image analysis (faster + better than Ollama)
+  async analyzeImageWithMiniMax(imagePath, prompt) {
+    try {
+      const escapedPath = imagePath.replace(/"/g, '\\"')
+      const escapedPrompt = prompt.replace(/"/g, '\\"')
+      
+      // Use shell to export env vars so they're passed to uvx subprocess
+      const cmd = `export MINIMAX_API_KEY="${MINIMAX_API_KEY}" && export MINIMAX_API_HOST="${MINIMAX_API_HOST}" && mcporter call minimax.understand_image prompt="${escapedPrompt}" image_source="${escapedPath}"`
+      
+      const result = execSync(cmd, { 
+        encoding: 'utf8',
+        timeout: 60000,
+        maxBuffer: 10 * 1024 * 1024,
+        shell: '/bin/bash'
+      })
+      
+      // MiniMax returns plain text, not JSON - return as-is
+      return result
+    } catch (err) {
+      console.error('MiniMax MCP error:', err.message)
+      throw err
+    }
+  }
+
+  // Fallback: Use direct Ollama instead of MiniMax MCP
+  async analyzeWithOllamaDirect(imagePath) {
+    const prompt = `Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit (tight/slim/regular/relaxed/loose/oversized), silhouette, style tags. Provide a detailed description.`
+
+    let result
+    try {
+      result = await this.analyzeImage(imagePath, prompt)
+    } catch (err) {
+      console.error('Direct Ollama analysis failed:', err.message)
+      throw err
+    }
+    
+    // Result is Ollama response - extract description
+    const rawDescription = result.response || ''
+    
+    // Extract basic structured data from the description
+    const lowerDesc = rawDescription.toLowerCase()
+    const structured = {
+      category: this.extractCategory(lowerDesc),
+      primary_color: this.extractColor(lowerDesc),
+      material: this.extractMaterial(lowerDesc),
+      fit: this.extractFit(lowerDesc),
+      pattern: this.extractPattern(lowerDesc),
+    }
+
+    return {
+      rawDescription,
+      structured,
+      model: this.model  // e.g., 'llava:7b'
+    }
   }
 
   async extractOutfitParams(userPrompt) {

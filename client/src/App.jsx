@@ -44,7 +44,7 @@ export default function App() {
   // Simple routing
   const renderPage = () => {
     if (!apiKey) {
-      return <Setup onSave={handleApiKeyChange} />
+      return <Setup onSave={handleApiKeyChange} onLoginSuccess={(user) => setCurrentUser(user)} />
     }
 
     switch (page) {
@@ -97,7 +97,7 @@ export default function App() {
   )
 }
 
-function Setup({ onSave }) {
+function Setup({ onSave, onLoginSuccess }) {
   const [email, setEmail] = useState('you@localhost')
   const [password, setPassword] = useState('thread123')
   const [loading, setLoading] = useState(false)
@@ -122,6 +122,10 @@ function Setup({ onSave }) {
       
       if (res.ok && data.apiKey) {
         onSave(data.apiKey)
+        // Also set the current user after login
+        if (onLoginSuccess) {
+          onLoginSuccess({ id: data.userId, name: data.name, email: data.email })
+        }
       } else {
         setError(data.error || 'Login failed')
       }

@@ -49,6 +49,20 @@ const fastify = Fastify({
   ...tlsOptions
 })
 
+// Handle empty JSON bodies gracefully
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+  try {
+    if (!body || body === '') {
+      req.body = {}
+    } else {
+      req.body = JSON.parse(body)
+    }
+    done(null, req.body)
+  } catch (err) {
+    done(err)
+  }
+})
+
 // Register plugins
 await fastify.register(cors, {
   origin: true,

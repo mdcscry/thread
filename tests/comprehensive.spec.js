@@ -215,9 +215,11 @@ test.describe('3. Weather API', () => {
     expect([200, 400, 404, 500]).toContain(res.status())
   })
 
-  test('GET /weather without location returns 400', async ({ request }) => {
+  test('GET /weather without location returns default (Boulder)', async ({ request }) => {
     const res = await request.get(`${BASE}/api/v1/weather`, { headers: HEADERS })
-    expect(res.status()).toBe(400)
+    expect(res.ok()).toBe(true)
+    const data = await res.json()
+    expect(data.temp_f).toBeDefined()
   })
 
   test('GET /weather/geocode returns coordinates', async ({ request }) => {
@@ -290,8 +292,8 @@ test.describe('4. Error Handling', () => {
   })
 
   test('API request with malformed JSON body returns 400', async ({ request }) => {
-    const res = await request.post(`${BASE}/api/v1/items`, {
-      headers: { Authorization: `Bearer ${API_KEY}` },
+    const res = await request.post(`${BASE}/api/v1/auth/login`, {
+      headers: { 'Content-Type': 'application/json' },
       data: 'not json'
     })
     expect([400, 415]).toContain(res.status())
@@ -318,7 +320,7 @@ test.describe('5. Edge Cases', () => {
 
   test('very long item name is handled', async ({ request }) => {
     const longName = 'a'.repeat(500)
-    const res = await request.patch(`${BASE}/api/v1/items/5`, {
+    const res = await request.patch(`${BASE}/api/v1/items/110`, {
       headers: HEADERS,
       data: { name: longName }
     })

@@ -128,6 +128,23 @@ export default function Settings({ apiKey, onApiKeyChange }) {
         </ol>
       </div>
 
+      {/* Backup */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1rem' }}>💾 Backup & Export</h3>
+        <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+          Download your entire wardrobe (database + images) as a ZIP file.
+        </p>
+        <a 
+          href={`${API_BASE}/api/v1/export`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-secondary"
+          style={{ display: 'inline-block', textDecoration: 'none' }}
+        >
+          📦 Download Backup
+        </a>
+      </div>
+
       {/* About */}
       <div className="card">
         <h3 style={{ marginBottom: '1rem' }}>ℹ️ About THREAD</h3>

@@ -29,7 +29,7 @@ test.describe('Wardrobe Edit Modal', () => {
     // Modal should open with form fields
     await expect(page.locator('text=Edit Item')).toBeVisible({ timeout: 3000 })
     await expect(page.locator('label:has-text("Name")')).toBeVisible()
-    await expect(page.locator('label:has-text("Category")')).toBeVisible()
+    await expect(page.locator('label:has-text("Category")').first()).toBeVisible()
   })
 
   test('edit modal has all fields', async ({ page }) => {
@@ -41,7 +41,7 @@ test.describe('Wardrobe Edit Modal', () => {
     
     // Check all field groups exist
     await expect(page.locator('label:has-text("Name")')).toBeVisible()
-    await expect(page.locator('label:has-text("Category")')).toBeVisible()
+    await expect(page.locator('label:has-text("Category")').first()).toBeVisible()
     await expect(page.locator('label:has-text("Subcategory")')).toBeVisible()
     await expect(page.locator('label:has-text("Primary Color")')).toBeVisible()
     await expect(page.locator('label:has-text("Pattern")')).toBeVisible()
@@ -135,6 +135,7 @@ test.describe('User Switching', () => {
 
   test('switching user changes active user state', async ({ page }) => {
     await login(page)
+    await page.waitForTimeout(500) // Wait for user state to initialize
     await page.click('nav a:has-text("👥")')
     await page.waitForLoadState('networkidle')
     
@@ -196,15 +197,20 @@ test.describe('Item Actions', () => {
   test('love button toggles heart', async ({ page }) => {
     await login(page)
     await page.click('nav a:has-text("👗")')
-    await page.waitForLoadState('networkidle')
+    await page.waitForSelector('.item-card', { timeout: 10000 })
     
-    // Click heart button on first item
+    // Get initial heart state
     const heartBtn = page.locator('.item-card-actions button').first()
-    await heartBtn.click()
-    await page.waitForTimeout(300)
+    const initialText = await heartBtn.textContent()
+    const isInitiallyLoved = initialText === '❤️'
     
-    // Should now show filled heart (test passes if no error)
-    await expect(page.locator('h1')).toContainText('Your Wardrobe')
+    // Click to toggle
+    await heartBtn.click()
+    await page.waitForTimeout(500)
+    
+    // Verify state changed
+    const newText = await heartBtn.textContent()
+    expect(newText).not.toBe(initialText)
   })
 
   test('delete button removes item after confirmation', async ({ page }) => {

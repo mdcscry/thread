@@ -180,7 +180,7 @@ export default function Wardrobe({ apiKey }) {
                   {item.is_loved ? '❤️' : '🤍'}
                 </button>
                 <button className="icon-btn" onClick={() => deleteItem(item.id)} style={{ background: 'rgba(255,0,0,0.5)' }}>🗑️</button>
-                {item.ai_flagged && <span className="badge badge-warning" style={{ position: 'absolute', top: 8, left: 8 }}>⚑</span>}
+                {item.ai_flagged && <span className="badge badge-warning" style={{ position: 'absolute', top: 8, left: 8, pointerEvents: 'none' }}>⚑</span>}
               </div>
               <div className="item-card-info">
                 <div className="item-card-name">{item.name || item.category || 'Uncategorized'}</div>

@@ -1,12 +1,15 @@
+// Handle HTTPS cert issues - MUST be before any imports
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 30000,
+  timeout: 180000, // 3 min - accounts for AI analysis
   retries: 0,
   workers: 1,
   use: {
-    baseURL: 'https://localhost:3000',
+    baseURL: 'https://localhost:3002',
     headless: true,
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,

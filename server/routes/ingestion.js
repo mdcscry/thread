@@ -95,6 +95,10 @@ export default async function ingestionRoutes(fastify, opts) {
     const { userId } = request.user
     const { image, filename } = request.body
     
+    if (!image) {
+      return reply.code(400).send({ error: 'image is required' })
+    }
+    
     try {
       // Remove data URL prefix if present
       const base64Data = image.replace(/^data:image\/\w+;base64,/, '')

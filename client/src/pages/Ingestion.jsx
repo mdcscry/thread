@@ -4,6 +4,7 @@ const API_BASE = ''
 
 export default function Ingestion({ apiKey }) {
   const [sourceUrl, setSourceUrl] = useState('')
+  const [sourceType, setSourceType] = useState('google_drive')
   const [model, setModel] = useState('llava:7b')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState(null)
@@ -56,7 +57,7 @@ export default function Ingestion({ apiKey }) {
         },
         body: JSON.stringify({
           sourceUrl,
-          sourceType: 'google_drive',
+          sourceType,
           model
         })
       })
@@ -130,10 +131,27 @@ export default function Ingestion({ apiKey }) {
       {/* Ingestion Form */}
       <div className="card">
         <div className="form-group">
-          <label>Google Drive Shared Folder Link</label>
+          <label>Source Type</label>
+          <select value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+            <option value="google_drive">Google Drive Folder</option>
+            <option value="url">Direct Image URL</option>
+            <option value="webpage">Webpage (extracts image links)</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>
+            {sourceType === 'google_drive' && 'Google Drive Shared Folder Link'}
+            {sourceType === 'url' && 'Direct Image URL'}
+            {sourceType === 'webpage' && 'Webpage URL'}
+          </label>
           <input 
             type="text"
-            placeholder="https://drive.google.com/drive/folders/..."
+            placeholder={
+              sourceType === 'google_drive' ? 'https://drive.google.com/drive/folders/...' :
+              sourceType === 'url' ? 'https://example.com/image.jpg' :
+              'https://example.com/gallery...'
+            }
             value={sourceUrl}
             onChange={(e) => setSourceUrl(e.target.value)}
           />
