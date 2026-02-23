@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────────────
-THREAD_DOMAIN="${THREAD_DOMAIN:-thread.yourdomain.com}"  # Change this!
+THREAD_DOMAIN="${THREAD_DOMAIN:-outerfit.net}"
 OPENCLAW_REPO="git@github.com:mdcscry/openclaw.git"
 THREAD_REPO="git@github.com:mdcscry/thread.git"
 APP_USER="deploy"
