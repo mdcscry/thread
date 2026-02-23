@@ -33,6 +33,7 @@ import voiceRoutes from './routes/voice.js'
 import onboardingRoutes from './routes/onboarding.js'
 import inviteRoutes from './routes/invites.js'
 import exportRoutes from './routes/export.js'
+import outfitTrainerRoutes from './routes/outfit-trainer.js'
 
 // Initialize database
 import { initializeDatabase } from './db/client.js'
@@ -106,6 +107,7 @@ fastify.register(voiceRoutes, { prefix: '/api/v1' })
 fastify.register(onboardingRoutes, { prefix: '/api/v1' })
 fastify.register(inviteRoutes, { prefix: '/api/v1' })
 fastify.register(exportRoutes, { prefix: '/api/v1' })
+fastify.register(outfitTrainerRoutes, { prefix: '/api/v1' })
 
 // Health check
 fastify.get('/health', async () => {

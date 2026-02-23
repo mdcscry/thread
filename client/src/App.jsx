@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Wardrobe from './pages/Wardrobe'
 import OutfitStudio from './pages/OutfitStudio'
+import OutfitTrainer from './pages/OutfitTrainer'
 import Ingestion from './pages/Ingestion'
 import Settings from './pages/Settings'
 import Profiles from './pages/Profiles'
@@ -52,6 +53,8 @@ export default function App() {
         return <Wardrobe apiKey={apiKey} userId={currentUser?.id} gender={currentUser?.gender} />
       case 'outfits':
         return <OutfitStudio apiKey={apiKey} userId={currentUser?.id} />
+      case 'trainer':
+        return <OutfitTrainer apiKey={apiKey} currentUser={currentUser} />
       case 'ingestion':
         return <Ingestion apiKey={apiKey} />
       case 'camera':
@@ -82,6 +85,7 @@ export default function App() {
           <nav className="nav">
             <a href="#" className={page === 'wardrobe' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('wardrobe') }}>👗</a>
             <a href="#" className={page === 'outfits' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('outfits') }}>✨</a>
+            <a href="#" className={page === 'trainer' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('trainer') }}>🧠</a>
             <a href="#" className={page === 'camera' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('camera') }}>📷</a>
             <a href="#" className={page === 'vacation' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('vacation') }}>✈️</a>
             <a href="#" className={page === 'profiles' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('profiles') }}>👥</a>
