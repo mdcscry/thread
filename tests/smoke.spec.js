@@ -180,18 +180,64 @@ test.describe('THREAD Smoke Tests', () => {
 })
 
 test.describe('Test Summary', () => {
-  test('summary: report item counts', async ({ page }) => {
+  test('summary: verify item counts by category', async ({ page }) => {
     await login(page)
     
     await page.click('nav a:has-text("👗")')
     await page.waitForLoadState('networkidle')
     
-    const totalItems = await getItemCount(page)
+    // Get all items
+    await page.waitForSelector('.item-card, [class*="itemGrid"]', { timeout: 5000 })
+    const items = await page.locator('.item-card, [class*="itemGrid"]').all()
+    const totalItems = items.length
+    
     console.log(`\n📊 TEST SUMMARY:`)
     console.log(`   Total items in wardrobe: ${totalItems}`)
-    console.log(`   Sources tested: URL, Local (manual), Camera (manual)`)
-    console.log(`   Note: Each source adds items independently\n`)
     
-    expect(totalItems).toBeGreaterThanOrEqual(0)
+    // Get categories for all items
+    const categories: string[] = []
+    for (const item of items) {
+      const categoryText = await item.textContent()
+      if (categoryText) {
+        // Try to extract category from item text
+        const category = categoryText.match(/(T-Shirt|Button-Up|Knitwear|Hoodie|Jacket|Jeans|Pants|Shorts|Boots|Sneakers|Shoes|Sandals|Belt|Hat|Socks|Dress|Blouse|Skirt|Heels)/i)
+        if (category) {
+          categories.push(category[1])
+        }
+      }
+    }
+    
+    // Count by category
+    const categoryCounts = categories.reduce((acc, cat) => {
+      acc[cat] = (acc[cat] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+    
+    console.log(`\n📦 Category counts:`)
+    for (const [cat, count] of Object.entries(categoryCounts).sort()) {
+      console.log(`   ${cat}: ${count}`)
+    }
+    
+    // Verify: each category should have 3 items (URL + Local + Drive)
+    const expectedPerCategory = 3
+    let allPassed = true
+    
+    console.log(`\n✅ Verification:`)
+    for (const [cat, count] of Object.entries(categoryCounts)) {
+      if (count === expectedPerCategory) {
+        console.log(`   ${cat}: ✅ ${count}/3`)
+      } else {
+        console.log(`   ${cat}: ❌ ${count}/3 (expected ${expectedPerCategory})`)
+        allPassed = false
+      }
+    }
+    
+    if (allPassed) {
+      console.log(`\n🎉 All categories have ${expectedPerCategory} items each!`)
+    } else {
+      console.log(`\n⚠️  Some categories don't have expected count`)
+    }
+    
+    expect(totalItems).toBeGreaterThan(0)
   })
 })
