@@ -7,23 +7,25 @@ const TOP_CATEGORIES = ['', 'T-Shirt', 'Button-Up', 'Knitwear', 'Hoodie', 'Jacke
 const BOTTOM_CATEGORIES = ['', 'Jeans', 'Pants', 'Shorts', 'Skirts', 'Leggings']
 const FOOTWEAR_CATEGORIES = ['', 'Boots', 'Sneakers', 'Shoes', 'Sandals', 'Heels', 'Flats']
 const ACCESSORY_CATEGORIES = ['', 'Belt', 'Hat', 'Socks', 'Scarf', 'Necklace', 'Earrings', 'Bracelet', 'Handbag']
+const OCCASIONS = ['casual', 'work', 'formal', 'date', 'outdoor']
 
 export default function OutfitTrainer({ apiKey, currentUser }) {
   const [loading, setLoading] = useState(false)
   const [outfits, setOutfits] = useState([])
-  const [feedback, setFeedback] = useState({})  // { itemId: 'thumbs_up' | 'thumbs_down' | 'neutral' }
+  const [feedback, setFeedback] = useState({})  // { itemId: 'thumbs_up' | 'thumbs_down' }
+  const [excludedOutfits, setExcludedOutfits] = useState(new Set())
   const [pendingCount, setPendingCount] = useState(0)
   const [stats, setStats] = useState({})
-  
+
   // Category selections
   const [filters, setFilters] = useState({
     top: '',
     bottom: '',
     footwear: '',
-    accessory: '',
-    style: 'all'
+    accessory: ''
   })
-  
+
+  const [occasion, setOccasion] = useState('casual')
   const [count, setCount] = useState(5)
 
   useEffect(() => {
@@ -47,7 +49,8 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
     setLoading(true)
     setOutfits([])
     setFeedback({})
-    
+    setExcludedOutfits(new Set())
+
     try {
       const res = await fetch(`${API_BASE}/api/v1/outfit-trainer/generate`, {
         method: 'POST',
@@ -57,6 +60,7 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
         },
         body: JSON.stringify({
           categories: filters,
+          occasion: occasion,
           count: count
         })
       })
@@ -77,25 +81,59 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
   }
 
   async function submitFeedback() {
-    const feedbackList = Object.entries(feedback).map(([itemId, type]) => ({
+    const feedbackItems = Object.entries(feedback).map(([itemId, feedbackType]) => ({
       itemId: parseInt(itemId),
-      feedbackType: type
+      feedback: feedbackType
     }))
-    
+
     try {
-      await fetch(`${API_BASE}/api/v1/outfit-trainer/feedback`, {
+      const res = await fetch(`${API_BASE}/api/v1/outfit-trainer/feedback`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(feedbackList)
+        body: JSON.stringify({
+          items: feedbackItems,
+          outfitId: null,
+          context: {
+            occasion: occasion,
+            season: null,
+            timeOfDay: null
+          }
+        })
       })
-      
+
+      const data = await res.json()
       setFeedback({})
+      setPendingCount(data.pendingCount || 0)
       loadStats()
     } catch (e) {
       console.error('Failed to submit feedback:', e)
+    }
+  }
+
+  async function excludeOutfit(outfitId) {
+    const outfit = outfits[outfitId - 1]
+    if (!outfit) return
+
+    try {
+      // Exclude all items in the outfit
+      for (const item of Object.values(outfit.items)) {
+        await fetch(`${API_BASE}/api/v1/outfit-trainer/exclude`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ itemId: item.id })
+        })
+      }
+
+      setExcludedOutfits(prev => new Set([...prev, outfitId]))
+      loadStats()
+    } catch (e) {
+      console.error('Failed to exclude outfit:', e)
     }
   }
 
@@ -106,7 +144,13 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       })
       const data = await res.json()
-      alert(`Trained! Updated ${data.itemsUpdated} items. Model version: ${data.newModelVersion}`)
+
+      if (data.error) {
+        alert(data.error)
+      } else {
+        alert(`Trained! Updated ${data.itemsUpdated} items. Model version: ${data.newModelVersion}`)
+      }
+
       loadStats()
     } catch (e) {
       console.error('Failed to train:', e)
@@ -174,28 +218,51 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
             </select>
           </div>
         </div>
-        
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Occasion</label>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {OCCASIONS.map(occ => (
+              <button
+                key={occ}
+                onClick={() => setOccasion(occ)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: occasion === occ ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
+                  color: occasion === occ ? 'white' : 'var(--color-text)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize'
+                }}
+              >
+                {occ}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
             <label style={{ marginRight: '0.5rem' }}>Outfits:</label>
-            <input 
-              type="number" 
-              min="1" 
-              max="20" 
+            <input
+              type="number"
+              min="1"
+              max="20"
               value={count}
               onChange={e => setCount(parseInt(e.target.value) || 5)}
               style={{ width: '60px', padding: '0.5rem' }}
             />
           </div>
-          
-          <button 
+
+          <button
             onClick={generateOutfits}
             disabled={loading}
             className="btn btn-primary"
           >
             {loading ? 'Generating...' : '🔄 Generate'}
           </button>
-          
+
           {pendingCount > 0 && (
             <span style={{ color: 'var(--color-accent)', marginLeft: 'auto' }}>
               {pendingCount} feedback pending
@@ -206,18 +273,20 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
       
       {/* Outfit Grid */}
       {outfits.length > 0 && (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
           gap: '1rem',
           marginBottom: '1rem'
         }}>
           {outfits.map((outfit, idx) => (
-            <OutfitCard 
-              key={idx} 
-              outfit={outfit} 
+            <OutfitCard
+              key={idx}
+              outfit={outfit}
               feedback={feedback}
               onFeedback={handleFeedback}
+              onExclude={() => excludeOutfit(outfit.id)}
+              isExcluded={excludedOutfits.has(outfit.id)}
             />
           ))}
         </div>
@@ -227,7 +296,7 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
       {Object.keys(feedback).length > 0 && (
         <div className="card" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', padding: '1rem' }}>
           <button onClick={submitFeedback} className="btn btn-primary">
-            👍 Submit Feedback ({Object.keys(feedback).length} items)
+            💾 Save Feedback ({Object.keys(feedback).length} items)
           </button>
         </div>
       )}
@@ -235,7 +304,7 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
       {/* Training Section */}
       <div className="card">
         <h3 style={{ marginBottom: '1rem' }}>🧠 Model Training</h3>
-        
+
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
             <strong>Pending Feedback:</strong> {pendingCount}
@@ -246,20 +315,23 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
           <div>
             <strong>Times Trained:</strong> {stats.trainingCount || 0}
           </div>
-          
-          <button 
+          <div>
+            <strong>Excluded Items:</strong> {stats.excludedItems || 0}
+          </div>
+
+          <button
             onClick={trainModel}
-            disabled={pendingCount < 3}
+            disabled={pendingCount < 50}
             className="btn btn-secondary"
             style={{ marginLeft: 'auto' }}
           >
             🧠 Train Model
           </button>
         </div>
-        
-        {pendingCount < 3 && (
+
+        {pendingCount < 50 && (
           <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-            Need at least 3 feedback items to train
+            Need at least 50 feedback items to train (currently {pendingCount})
           </p>
         )}
       </div>
@@ -267,36 +339,36 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
   )
 }
 
-function OutfitCard({ outfit, feedback, onFeedback }) {
+function OutfitCard({ outfit, feedback, onFeedback, onExclude, isExcluded }) {
   const slots = [
     { key: 'top', label: 'Top' },
     { key: 'bottom', label: 'Bottom' },
     { key: 'footwear', label: 'Footwear' },
     { key: 'accessory', label: 'Accessory' }
   ]
-  
+
   return (
-    <div className="card" style={{ padding: '0.75rem' }}>
+    <div className="card" style={{ padding: '0.75rem', opacity: isExcluded ? 0.5 : 1 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {slots.map(slot => {
           const item = outfit.items?.[slot.key]
           if (!item) return null
-          
+
           const itemFeedback = feedback[item.id]
-          
+
           return (
             <div key={slot.key} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <div style={{ 
-                width: '50px', 
-                height: '50px', 
+              <div style={{
+                width: '50px',
+                height: '50px',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 flexShrink: 0,
                 backgroundColor: 'var(--color-bg-secondary)'
               }}>
                 {item.primary_image ? (
-                  <img 
-                    src={item.primary_image} 
+                  <img
+                    src={item.primary_image}
                     alt={item.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -306,7 +378,7 @@ function OutfitCard({ outfit, feedback, onFeedback }) {
                   </div>
                 )}
               </div>
-              
+
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {item.name}
@@ -315,44 +387,56 @@ function OutfitCard({ outfit, feedback, onFeedback }) {
                   {item.category}
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', gap: '0.25rem' }}>
-                <button 
+                <button
                   onClick={() => onFeedback(item.id, 'thumbs_up')}
-                  style={{ 
-                    padding: '0.25rem', 
+                  style={{
+                    padding: '0.25rem',
                     fontSize: '1rem',
                     opacity: itemFeedback === 'thumbs_up' ? 1 : 0.5,
-                    background: itemFeedback === 'thumbs_up' ? 'var(--color-success)' : 'transparent'
+                    background: itemFeedback === 'thumbs_up' ? 'var(--color-success)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   👍
                 </button>
-                <button 
+                <button
                   onClick={() => onFeedback(item.id, 'thumbs_down')}
-                  style={{ 
-                    padding: '0.25rem', 
+                  style={{
+                    padding: '0.25rem',
                     fontSize: '1rem',
                     opacity: itemFeedback === 'thumbs_down' ? 1 : 0.5,
-                    background: itemFeedback === 'thumbs_down' ? 'var(--color-error)' : 'transparent'
+                    background: itemFeedback === 'thumbs_down' ? 'var(--color-error)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   👎
-                </button>
-                <button 
-                  onClick={() => onFeedback(item.id, 'neutral')}
-                  style={{ 
-                    padding: '0.25rem', 
-                    fontSize: '1rem',
-                    opacity: itemFeedback === 'neutral' ? 1 : 0.5
-                  }}
-                >
-                  😐
                 </button>
               </div>
             </div>
           )
         })}
+
+        {/* Exclude button at bottom of card */}
+        <button
+          onClick={onExclude}
+          disabled={isExcluded}
+          style={{
+            marginTop: '0.5rem',
+            padding: '0.5rem',
+            fontSize: '0.85rem',
+            background: isExcluded ? 'var(--color-bg-secondary)' : 'transparent',
+            border: '1px solid var(--color-border)',
+            borderRadius: '4px',
+            cursor: isExcluded ? 'default' : 'pointer',
+            opacity: isExcluded ? 0.5 : 1
+          }}
+        >
+          {isExcluded ? '🚫 Excluded' : '🚫 Exclude Outfit'}
+        </button>
       </div>
     </div>
   )
