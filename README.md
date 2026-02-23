@@ -154,6 +154,74 @@ No CLA, no corporate process. Just make it better and share.
 
 ---
 
+## Development Workflow
+
+### Branches
+
+| Branch | URL | Database | Purpose |
+|--------|-----|----------|---------|
+| `main` | https://localhost:3000 | `thread.db` | Production |
+| `qa` | https://localhost:3002 | `thread-test.db` | Development & Testing |
+
+### Setup
+
+```bash
+# Create test database (one-time)
+cp data/thread.db data/thread-test.db
+
+# Start test server (qa branch)
+PORT=3002 DATABASE_PATH=$(pwd)/data/thread-test.db pm2 start "node server/index.js" --name thread-test
+
+# Configure Playwright for test server
+# (playwright.config.js already set to port 3002)
+```
+
+### Workflow
+
+```bash
+# 1. Switch to qa and pull latest
+git checkout qa
+git pull origin qa
+
+# 2. Make changes, test locally
+#    Run: npm run dev (client) in one terminal
+#    Run: pm2 restart thread-test (server)
+
+# 3. Run tests
+npx playwright test
+
+# 4. Commit to qa
+git add -A
+git commit -m "description of changes"
+git push origin qa
+
+# 5. When ready, merge to main for production
+git checkout main
+git merge qa
+git push origin main
+
+# 6. Rebuild and restart production
+cd client && npm run build && pm2 restart thread
+```
+
+### Quick Commands
+
+```bash
+# Restart production server
+pm2 restart thread
+
+# Restart test server
+pm2 restart thread-test
+
+# View production logs
+pm2 logs thread
+
+# View test logs
+pm2 logs thread-test
+```
+
+---
+
 ## License
 
 MIT — use it, break it, fork it, extend it.
