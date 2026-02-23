@@ -1,6 +1,7 @@
 import db from '../db/client.js'
 import { authenticateApiKey } from '../middleware/auth.js'
 import { updateItemScore } from '../services/PreferenceService.js'
+import { trainModel as nnTrainModel, blendedScoreOutfit, getTrainingStats, getUserNnWeight, clearModelCache } from '../services/TrainerService.js'
 
 export default async function outfitTrainerRoutes(fastify, opts) {
   
@@ -64,24 +65,52 @@ export default async function outfitTrainerRoutes(fastify, opts) {
       const footwear = byCategory[categories?.footwear] || byCategory['Boots'] || byCategory['Sneakers'] || byCategory['Shoes'] || byCategory['Sandals'] || Object.values(byCategory).flat().slice(0, 10)
       const accessories = byCategory[categories?.accessory] || byCategory['Belt'] || byCategory['Hat'] || byCategory['Socks'] || Object.values(byCategory).flat().slice(0, 10)
       
-      const outfits = []
-      for (let i = 0; i < count; i++) {
+      // Build context for scoring
+      const context = {
+        occasion: occasion || 'casual',
+        season: getCurrentSeason(),
+        timeOfDay: getCurrentTimeOfDay(),
+      }
+
+      // Generate more candidates than needed, then rank by blended score
+      const candidateCount = Math.min(count * 3, 30)
+      const candidates = []
+      for (let i = 0; i < candidateCount; i++) {
         const outfit = {
           id: i + 1,
           items: {
             top: tops[i % tops.length] || null,
-            bottom: bottoms[i % bottoms.length] || null,
-            footwear: footwear[i % footwear.length] || null,
-            accessory: accessories[i % accessories.length] || null
+            bottom: bottoms[(i * 3 + 1) % bottoms.length] || null,
+            footwear: footwear[(i * 7 + 2) % footwear.length] || null,
+            accessory: accessories[(i * 5 + 3) % accessories.length] || null
           }
         }
         // Filter out null items
         outfit.items = Object.fromEntries(Object.entries(outfit.items).filter(([_, v]) => v))
         if (Object.keys(outfit.items).length > 0) {
-          outfits.push(outfit)
+          candidates.push(outfit)
         }
       }
-      
+
+      // Score each candidate with EMA + NN blend
+      const scored = await Promise.all(
+        candidates.map(async (outfit) => {
+          const itemList = Object.values(outfit.items)
+          try {
+            const scoring = await blendedScoreOutfit(userId, itemList, context)
+            return { ...outfit, ...scoring }
+          } catch (e) {
+            // Fallback: pure EMA average
+            const emaScore = itemList.reduce((sum, item) => sum + (item.ema_score ?? 0.5), 0) / itemList.length
+            return { ...outfit, finalScore: emaScore, emaScore, nnScore: null, nnWeight: 0, scoringMethod: 'ema' }
+          }
+        })
+      )
+
+      // Sort by finalScore, return top N
+      scored.sort((a, b) => b.finalScore - a.finalScore)
+      const outfits = scored.slice(0, count)
+
       return { outfits }
     } catch (error) {
       console.error('Generate error:', error)
@@ -198,69 +227,35 @@ export default async function outfitTrainerRoutes(fastify, opts) {
     }
   })
 
-  // Train model (apply feedback to EMA scores)
+  // Train neural network model
   fastify.post('/outfit-trainer/train', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
 
     try {
-      // Get all pending feedback
-      const feedback = db.prepare(`
-        SELECT * FROM outfit_feedback
-        WHERE user_id = ? AND trained = 0
-        ORDER BY created_at
-      `).all(userId)
+      // Train the NN (handles sample validation, feature computation, training, saving)
+      const result = await nnTrainModel(userId)
 
-      if (feedback.length < 50) {
-        return { error: 'Need at least 50 feedback items to train', pending: feedback.length }
+      if (!result.success) {
+        return { error: result.error, pending: result.samples }
       }
-      
-      // Signal weights
-      const weights = {
-        thumbs_up: 0.6,
-        thumbs_down: -0.8,
-        neutral: 0,
-        exclude: -0.5
-      }
-      
-      let updated = 0
-      const updateItem = db.prepare(`
-        UPDATE clothing_items SET ema_score = ?, ema_count = ema_count + 1
-        WHERE id = ?
-      `)
-      
-      // Process each feedback
-      for (const fb of feedback) {
-        const item = db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(fb.item_id)
-        if (!item) continue
-        
-        const weight = weights[fb.feedback_type] || 0
-        const newScore = updateItemScore(item, weight)
-        
-        updateItem.run(newScore.ema_score, fb.item_id)
-        updated++
-      }
-      
-      // Mark feedback as trained
+
+      // Mark all feedback as trained
       db.prepare(`
-        UPDATE outfit_feedback SET trained = 1 WHERE user_id = ?
+        UPDATE outfit_feedback SET trained = 1 WHERE user_id = ? AND (trained = 0 OR trained IS NULL)
       `).run(userId)
-      
-      // Record training session
-      const sessionCount = db.prepare(`
-        SELECT COUNT(*) as count FROM training_sessions WHERE user_id = ?
-      `).get(userId)
-      
-      const newVersion = `v1.${(sessionCount?.count || 0) + 1}`
-      
-      db.prepare(`
-        INSERT INTO training_sessions (user_id, feedback_count, model_version)
-        VALUES (?, ?, ?)
-      `).run(userId, updated, newVersion)
-      
-      return { 
-        success: true, 
-        itemsUpdated: updated,
-        newModelVersion: newVersion
+
+      // Clear model cache so next scoring picks up new model
+      clearModelCache(userId)
+
+      return {
+        success: true,
+        samples: result.samples,
+        validationLoss: result.validationLoss,
+        validationMAE: result.validationMAE,
+        epochs: result.epochs,
+        trainingTimeMs: result.trainingTimeMs,
+        nnWeight: result.nnWeight,
+        paramCount: result.paramCount,
       }
     } catch (error) {
       console.error('Train error:', error)
@@ -268,7 +263,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
     }
   })
   
-  // Get stats
+  // Get stats (includes NN training info)
   fastify.get('/outfit-trainer/stats', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
 
@@ -278,24 +273,42 @@ export default async function outfitTrainerRoutes(fastify, opts) {
         WHERE user_id = ? AND (trained = 0 OR trained IS NULL)
       `).get(userId)
 
-      const training = db.prepare(`
-        SELECT COUNT(*) as count, MAX(model_version) as lastVersion
-        FROM training_sessions WHERE user_id = ?
-      `).get(userId)
-
       const excluded = db.prepare(`
         SELECT COUNT(*) as count FROM item_exclusions WHERE user_id = ?
       `).get(userId)
 
+      // Get NN training stats
+      const nnStats = getTrainingStats(userId)
+
       return {
         pendingFeedback: pending?.count || 0,
-        trainingCount: training?.count || 0,
-        modelVersion: training?.lastVersion || 'v1.0 (EMA)',
-        excludedItems: excluded?.count || 0
+        totalSamples: nnStats.totalSamples,
+        trainingRuns: nnStats.trainingRuns,
+        lastTrained: nnStats.lastTrained,
+        validationLoss: nnStats.validationLoss,
+        validationMAE: nnStats.validationMAE,
+        nnWeight: nnStats.nnWeight,
+        paramCount: nnStats.paramCount,
+        excludedItems: excluded?.count || 0,
       }
     } catch (error) {
       console.error('Stats error:', error)
-      return { pendingFeedback: 0, trainingCount: 0, modelVersion: 'v1.0 (EMA)', excludedItems: 0 }
+      return { pendingFeedback: 0, totalSamples: 0, trainingRuns: 0, nnWeight: 0, excludedItems: 0 }
     }
   })
+}
+
+function getCurrentSeason() {
+  const month = new Date().getMonth() + 1
+  if (month >= 3 && month <= 5) return 'spring'
+  if (month >= 6 && month <= 8) return 'summer'
+  if (month >= 9 && month <= 11) return 'fall'
+  return 'winter'
+}
+
+function getCurrentTimeOfDay() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'morning'
+  if (hour < 17) return 'afternoon'
+  return 'evening'
 }

@@ -148,7 +148,17 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
       if (data.error) {
         alert(data.error)
       } else {
-        alert(`Trained! Updated ${data.itemsUpdated} items. Model version: ${data.newModelVersion}`)
+        const msg = [
+          `✅ Model trained!`,
+          `Samples: ${data.samples}`,
+          `Loss: ${data.validationLoss}`,
+          data.validationMAE ? `MAE: ${data.validationMAE}` : null,
+          `Epochs: ${data.epochs}`,
+          `Time: ${data.trainingTimeMs}ms`,
+          `NN Weight: ${Math.round((data.nnWeight || 0) * 100)}%`,
+          `Params: ${data.paramCount}`,
+        ].filter(Boolean).join('\n')
+        alert(msg)
       }
 
       loadStats()
@@ -303,37 +313,58 @@ export default function OutfitTrainer({ apiKey, currentUser }) {
       
       {/* Training Section */}
       <div className="card">
-        <h3 style={{ marginBottom: '1rem' }}>🧠 Model Training</h3>
+        <h3 style={{ marginBottom: '1rem' }}>🧠 Neural Network</h3>
 
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div>
-            <strong>Pending Feedback:</strong> {pendingCount}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ padding: '0.5rem', background: 'var(--color-bg-secondary, #f5f5f5)', borderRadius: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.totalSamples || 0}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Total Samples</div>
           </div>
-          <div>
-            <strong>Model Version:</strong> {stats.modelVersion || 'v1.0 (EMA)'}
+          <div style={{ padding: '0.5rem', background: 'var(--color-bg-secondary, #f5f5f5)', borderRadius: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{pendingCount}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Pending</div>
           </div>
-          <div>
-            <strong>Times Trained:</strong> {stats.trainingCount || 0}
+          <div style={{ padding: '0.5rem', background: 'var(--color-bg-secondary, #f5f5f5)', borderRadius: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.validationLoss != null ? stats.validationLoss.toFixed(3) : '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Val Loss</div>
           </div>
-          <div>
-            <strong>Excluded Items:</strong> {stats.excludedItems || 0}
+          <div style={{ padding: '0.5rem', background: 'var(--color-bg-secondary, #f5f5f5)', borderRadius: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: stats.nnWeight > 0 ? 'var(--color-success, #22c55e)' : 'inherit' }}>
+              {Math.round((stats.nnWeight || 0) * 100)}%
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>NN Weight</div>
           </div>
+          <div style={{ padding: '0.5rem', background: 'var(--color-bg-secondary, #f5f5f5)', borderRadius: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.trainingRuns || 0}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Train Runs</div>
+          </div>
+          <div style={{ padding: '0.5rem', background: 'var(--color-bg-secondary, #f5f5f5)', borderRadius: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.excludedItems || 0}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Excluded</div>
+          </div>
+        </div>
 
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button
             onClick={trainModel}
-            disabled={pendingCount < 50}
+            disabled={(stats.totalSamples || 0) < 50}
             className="btn btn-secondary"
-            style={{ marginLeft: 'auto' }}
           >
             🧠 Train Model
           </button>
-        </div>
+          
+          {(stats.totalSamples || 0) < 50 && (
+            <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+              Need 50+ samples to train ({stats.totalSamples || 0}/50)
+            </span>
+          )}
 
-        {pendingCount < 50 && (
-          <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-            Need at least 50 feedback items to train (currently {pendingCount})
-          </p>
-        )}
+          {stats.nnWeight > 0 && (
+            <span style={{ fontSize: '0.85rem', marginLeft: 'auto' }}>
+              Scoring: {Math.round((1 - stats.nnWeight) * 100)}% EMA + {Math.round(stats.nnWeight * 100)}% NN
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -349,6 +380,17 @@ function OutfitCard({ outfit, feedback, onFeedback, onExclude, isExcluded }) {
 
   return (
     <div className="card" style={{ padding: '0.75rem', opacity: isExcluded ? 0.5 : 1 }}>
+      {/* Score badge */}
+      {outfit.finalScore != null && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          <span>Score: {outfit.finalScore.toFixed(2)}</span>
+          <span style={{ opacity: 0.7 }}>
+            {outfit.scoringMethod === 'blend' 
+              ? `EMA ${outfit.emaScore?.toFixed(2)} + NN ${outfit.nnScore?.toFixed(2)}`
+              : outfit.scoringMethod || 'ema'}
+          </span>
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {slots.map(slot => {
           const item = outfit.items?.[slot.key]
