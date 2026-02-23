@@ -775,3 +775,136 @@ This design document covers:
 
 *Document Version: 1.0*
 *Last Updated: 2026-02-23*
+
+---
+
+## Additional Engineering Considerations
+
+### Error Handling
+
+```javascript
+// Graceful degradation
+async function generateOutfits(userId, filters, count) {
+  try {
+    // Try NN first
+    if (nnReady && nnConfident) {
+      return await nnGenerate(userId, filters, count)
+    }
+    // Fall back to EMA
+    return await emaGenerate(userId, filters, count)
+  } catch (error) {
+    console.error('Generation failed:', error)
+    // Ultimate fallback: random
+    return await randomGenerate(userId, filters, count)
+  }
+}
+```
+
+**Error Scenarios:**
+| Scenario | Handling |
+|----------|----------|
+| No items in category | Show partial outfit, warn user |
+| NN timeout | Fall back to EMA |
+| DB connection lost | Cache feedback locally, retry |
+| Invalid feedback | Validate, reject malformed |
+
+### Rate Limiting
+
+```javascript
+// Prevent abuse
+const rateLimits = {
+  generate: { max: 100, window: '1h' },
+  feedback: { max: 500, window: '1h' },
+  train: { max: 10, window: '24h' }
+}
+```
+
+### Testing Strategy
+
+```javascript
+// Unit tests
+describe('EMA Scoring', () => {
+  test('thumbs_up increases score', () => {
+    const item = { ema_score: 0.5, ema_count: 5 }
+    const result = updateItemScore(item, 0.6)
+    expect(result.ema_score).toBeGreaterThan(0.5)
+  })
+})
+
+// Integration tests
+test('feedback persists to DB', async () => {
+  await submitFeedback([{ itemId: 1, type: 'thumbs_up' }])
+  const feedback = await getFeedback(1)
+  expect(feedback).toHaveLength(1)
+})
+
+// E2E tests
+test('full trainer flow', async ({ page }) => {
+  await login()
+  await page.click('[data-testid="trainer"]')
+  await page.click('Generate')
+  await page.click('thumbs_up')
+  await page.click('Submit')
+  await expect(page.locator('.pending-count')).toHaveText('1')
+})
+```
+
+### Security
+
+- **Input validation**: Sanitize all feedback
+- **SQL injection**: Use parameterized queries (done)
+- **Rate limiting**: Per-user limits
+- **API authentication**: Required for all endpoints (done)
+- **Data encryption**: At rest for sensitive preferences
+
+### Monitoring & Observability
+
+```javascript
+// Metrics to track
+const metrics = {
+  generation_latency_ms: histogram,
+  feedback_submission_rate: counter,
+  nn_model_confidence: gauge,
+  ema_nn_blend_ratio: gauge,
+  training_duration_seconds: histogram,
+  user_satisfaction_score: gauge
+}
+
+// Alerts
+if (nn_confidence < 0.5 && training_samples > 1000) {
+  alert('NN underperforming with sufficient data')
+}
+```
+
+### Edge Cases
+
+1. **User deletes all items**: Clear feedback, restart learning
+2. **Duplicate feedback**: Idempotent - don't double count
+3. **Very large wardrobe**: Pagination, limit to top-scored items
+4. **No feedback ever**: Pure cold start, use demographic defaults
+5. **Conflicting feedback**: EMA naturally权重s recent over old
+6. **Items deleted**: Keep feedback history, mark item_id as orphaned
+
+### Migration Strategy
+
+```sql
+-- v1: Add tables
+ALTER TABLE clothing_items ADD COLUMN ema_score DEFAULT 0.5;
+ALTER TABLE clothing_items ADD COLUMN ema_count DEFAULT 0;
+
+-- v2: Add training tables (done)
+CREATE TABLE outfit_feedback (...);
+CREATE TABLE training_sessions (...);
+
+-- v3: Add NN-specific tables
+CREATE TABLE user_preference_profiles (...);
+CREATE TABLE model_versions (...);
+```
+
+### Rollback Plan
+
+If NN performs worse than EMA:
+1. Monitor A/B test results daily
+2.自动 rollback if NN group has >10% lower satisfaction
+3. Keep NN disabled but preserve trained weights
+4. Investigate and retrain with adjustments
