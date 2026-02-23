@@ -11,8 +11,6 @@ import fetch from 'node-fetch'
 import sharp from 'sharp'
 import { readFileSync } from 'node:fs'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 const ANALYSIS_PROMPT = `You are a clothing analysis AI. Analyze this clothing item photo and return ONLY valid JSON with no markdown or extra text.
@@ -48,8 +46,9 @@ Be precise with hex colors. Estimate temperature range based on material/weight.
 
 export class GeminiVisionService {
   constructor() {
-    this.apiKey = GEMINI_API_KEY
-    this.model = GEMINI_MODEL
+    // Read at construction time (after dotenv.config() has run)
+    this.apiKey = process.env.GEMINI_API_KEY || ''
+    this.model = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
   }
 
   isAvailable() {
