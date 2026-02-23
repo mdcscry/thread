@@ -1,17 +1,19 @@
 import fetch from 'node-fetch'
 import sharp from 'sharp'
 import { execSync } from 'child_process'
+import { GeminiVisionService } from './GeminiVisionService.js'
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
 
 // MiniMax MCP configuration
-const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || 'sk-cp-gfNN3qGjSMWCHmbDyFs3Mpc4PV48d3RDsf5siq_v_KBGEyR38WMtGaZhZUWLdZLbdBa_pdZiTtcJ5TALzyo1XfeIWM1TOzjNbcQjLqDaU4HgeUbZ0f8qji8'
+const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || ''
 const MINIMAX_API_HOST = process.env.MINIMAX_API_HOST || 'https://api.minimax.io'
 
 export class OllamaService {
   constructor(model = null) {
     this.model = model || process.env.DEFAULT_VISION_MODEL || 'llava:7b'
     this.textModel = process.env.DEFAULT_TEXT_MODEL || 'llama3.2:3b'
+    this.gemini = new GeminiVisionService()
   }
 
   async checkHealth() {
@@ -79,37 +81,48 @@ export class OllamaService {
   }
 
   async analyzeImageStructured(imagePath) {
-    // Use MiniMax MCP for faster, better image analysis
-    // Just get a description and extract structured data from it
-    const prompt = `Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit (tight/slim/regular/relaxed/loose/oversized), silhouette, style tags.`
-
-    let result
-    try {
-      // Use MiniMax MCP via mcporter
-      result = await this.analyzeImageWithMiniMax(imagePath, prompt)
-    } catch (error) {
-      console.error('MiniMax analysis failed:', error.message)
-      throw error
-    }
+    // Provider cascade: Gemini Flash (free) → MiniMax MCP → Ollama local
     
-    // Result is text description - store as raw
-    const rawDescription = typeof result === 'string' ? result : JSON.stringify(result)
-    
-    // Extract basic structured data from the description
-    const lowerDesc = rawDescription.toLowerCase()
-    const structured = {
-      category: this.extractCategory(lowerDesc),
-      primary_color: this.extractColor(lowerDesc),
-      material: this.extractMaterial(lowerDesc),
-      fit: this.extractFit(lowerDesc),
-      pattern: this.extractPattern(lowerDesc),
+    // 1. Try Gemini Flash (fast, free, structured JSON)
+    if (this.gemini.isAvailable()) {
+      try {
+        console.log('Vision: trying Gemini Flash...')
+        const result = await this.gemini.analyzeImageStructured(imagePath)
+        console.log(`Vision: Gemini Flash succeeded (${result.structured.category}, ${result.structured.primary_color})`)
+        return result
+      } catch (error) {
+        console.warn('Gemini Flash failed, trying fallback:', error.message)
+      }
     }
 
-    return {
-      rawDescription,
-      structured,
-      model: 'minimax-mcp'
+    // 2. Try MiniMax MCP
+    if (MINIMAX_API_KEY) {
+      try {
+        console.log('Vision: trying MiniMax MCP...')
+        const prompt = `Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit (tight/slim/regular/relaxed/loose/oversized), silhouette, style tags.`
+        const result = await this.analyzeImageWithMiniMax(imagePath, prompt)
+        const rawDescription = typeof result === 'string' ? result : JSON.stringify(result)
+        const lowerDesc = rawDescription.toLowerCase()
+        console.log('Vision: MiniMax MCP succeeded')
+        return {
+          rawDescription,
+          structured: {
+            category: this.extractCategory(lowerDesc),
+            primary_color: this.extractColor(lowerDesc),
+            material: this.extractMaterial(lowerDesc),
+            fit: this.extractFit(lowerDesc),
+            pattern: this.extractPattern(lowerDesc),
+          },
+          model: 'minimax-mcp'
+        }
+      } catch (error) {
+        console.warn('MiniMax MCP failed, trying Ollama:', error.message)
+      }
     }
+
+    // 3. Fallback: Ollama local (slow on Intel, but works)
+    console.log('Vision: falling back to Ollama local...')
+    return await this.analyzeWithOllamaDirect(imagePath)
   }
   
   // Helper methods to extract structured data from description
