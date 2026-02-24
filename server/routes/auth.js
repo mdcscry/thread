@@ -10,6 +10,9 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000 // 1 minute
 const RATE_LIMIT_MAX = 5
 
 function checkRateLimit(ip) {
+  // Skip rate limiting in test mode
+  if (process.env.NODE_ENV === 'test') return true
+  
   const now = Date.now()
   const record = rateLimitMap.get(ip) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
 

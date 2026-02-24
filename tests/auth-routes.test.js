@@ -7,6 +7,17 @@ describe('Auth Routes', () => {
   const testEmail = `test-${Date.now()}@example.com`
   const testPassword = 'testpassword123'
   
+  // Set up test user once before login tests (use a different email to not conflict with register tests)
+  const loginEmail = `logintest-${Date.now()}@example.com`
+  
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: loginEmail, password: testPassword, firstName: 'LoginTest' })
+    
+    expect(res.status).toBe(201)
+  })
+  
   describe('POST /auth/register', () => {
     test('registers new user', async () => {
       const res = await request(app)
@@ -45,7 +56,7 @@ describe('Auth Routes', () => {
     test('logs in with valid credentials', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: testEmail, password: testPassword })
+        .send({ email: loginEmail, password: testPassword })
       
       expect(res.status).toBe(200)
       expect(res.body).toHaveProperty('apiKey')
@@ -54,7 +65,7 @@ describe('Auth Routes', () => {
     test('rejects wrong password', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: testEmail, password: 'wrongpassword' })
+        .send({ email: loginEmail, password: 'wrongpassword' })
       
       expect(res.status).toBe(401)
     })

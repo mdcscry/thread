@@ -215,8 +215,17 @@ fastify.setErrorHandler((error, request, reply) => {
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(error)
   }
+  
+  // Handle Fastify validation errors - return 400 instead of 500
+  if (error.validation) {
+    return reply.status(400).send({ 
+      error: error.message || 'Validation failed',
+      validation: error.validation 
+    })
+  }
+  
   fastify.log.error(error)
-  reply.status(500).send({ error: 'Internal server error' })
+  return reply.status(500).send({ error: 'Internal server error' })
 })
 
 // Root - serve index.html for SPA
