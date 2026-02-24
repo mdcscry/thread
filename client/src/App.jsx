@@ -7,6 +7,7 @@ import Settings from './pages/Settings'
 import Profiles from './pages/Profiles'
 import Camera from './pages/Camera'
 import Vacation from './pages/Vacation'
+import PasswordReset from './pages/PasswordReset'
 
 const API_BASE = ''
 
@@ -65,6 +66,10 @@ export default function App() {
         return <Profiles apiKey={apiKey} currentUser={currentUser} onSwitchUser={handleSwitchUser} />
       case 'settings':
         return <Settings apiKey={apiKey} onApiKeyChange={handleApiKeyChange} />
+      case 'password-reset':
+        return <PasswordReset onReset={() => setPage('wardrobe')} />
+      case 'verify-email':
+        return <PasswordReset isVerifyEmail onVerified={() => setPage('wardrobe')} />
       default:
         return <Wardrobe apiKey={apiKey} userId={currentUser?.id} gender={currentUser?.gender} />
     }
@@ -299,6 +304,10 @@ function Setup({ onSave, onLoginSuccess }) {
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
             </button>
+            
+            <p style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); setPage('password-reset') }}>Forgot password?</a>
+            </p>
           </form>
         ) : mode === 'signup' ? (
           <form onSubmit={handleSignup}>

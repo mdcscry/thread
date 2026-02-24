@@ -69,6 +69,58 @@
 
 ---
 
+## Providers & External Services
+
+| Category | Provider | Purpose | Free Tier |
+|----------|----------|---------|-----------|
+| **Hosting** | DatabaseMart (VPS) | Production server | No |
+| **Domain** | Cloudflare | DNS, CDN, SSL | Yes |
+| **Code** | GitHub | Source control | Yes |
+| **Email** | Resend | Transactional emails | 3k/mo |
+| **Bot Protection** | Cloudflare Turnstile | Signup protection | Yes |
+| **Vision AI (Primary)** | Google Gemini 2.5 Flash | Image analysis | 1.5k/day |
+| **Vision AI (Fallback)** | MiniMax M2.1 | Image analysis (local) | N/A |
+| **Vision AI (Fallback)** | Ollama (llava:7b) | Local image analysis | N/A |
+| **LLM** | MiniMax M2.5 | Text generation | API cost |
+| **LLM** | Ollama (llama3.2:3b) | Local text generation | N/A |
+| **AI Code Review** | Claude Code (roborev) | Auto code review | Credits |
+| **Backup** | Cloudflare R2 | Offsite backups | 10GB/mo |
+| **Error Monitoring** | Sentry | Error tracking | 5k/mo |
+
+### Vision AI Cascade
+```
+User uploads photo → Gemini 2.5 Flash → MiniMax → Ollama llava → Error
+```
+
+### Provider Configuration
+Add credentials to `.env`:
+```bash
+# Resend (email)
+RESEND_API_KEY=re_...
+
+# Cloudflare (Turnstile)
+TURNSTILE_SITE_KEY=0x4...
+TURNSTILE_SECRET_KEY=0x4...
+
+# Google (Gemini)
+GEMINI_API_KEY=AI...
+
+# MiniMax
+MINIMAX_API_KEY=...
+
+# R2 Backup
+R2_ENDPOINT=...
+R2_ACCESS_KEY=...
+R2_SECRET_KEY=...
+R2_BUCKET=...
+
+# Sentry
+SENTRY_DSN=https://...@sentry.io/...
+VITE_SENTRY_DSN=https://...@sentry.io/...
+```
+
+---
+
 ## Data Flow
 
 ```mermaid
