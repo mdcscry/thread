@@ -85,6 +85,7 @@
 | **LLM** | Ollama (llama3.2:3b) | Local text generation | N/A |
 | **AI Code Review** | Claude Code (roborev) | Auto code review | Credits |
 | **Billing** | Stripe | Payments, subscriptions | Pay per use |
+| **Billing** | Lago Cloud | Subscription management | Free tier |
 | **Backup** | Cloudflare R2 | Offsite backups | 10GB/mo |
 | **Error Monitoring** | Sentry | Error tracking | 5k/mo |
 
@@ -118,6 +119,16 @@ R2_BUCKET=...
 # Sentry
 SENTRY_DSN=https://...@sentry.io/...
 VITE_SENTRY_DSN=https://...@sentry.io/...
+
+# Lago (billing)
+LAGO_API_URL=https://api.getlago.com
+LAGO_API_KEY=lago_live_...
+WEBHOOK_LAGO_SECRET=whsec_...
+
+# Stripe (via Lago - rarely needed directly)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 ---
@@ -292,6 +303,90 @@ erDiagram
 | GET | /api/v1/users | List users |
 | PATCH | /api/v1/users/:id | Update user |
 
+### Billing
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/billing/plans | List available plans |
+| GET | /api/v1/billing/entitlement | Get current user's entitlement |
+| POST | /api/v1/billing/checkout | Create checkout session |
+| GET | /api/v1/billing/portal | Get customer portal URL |
+| POST | /api/v1/webhooks/lago | Lago webhook receiver |
+
+---
+
+## Entitlements
+
+THREAD enforces plan limits via the `requireEntitlement` middleware. All paid features check entitlements before execution.
+
+### Plan Limits
+| Plan | Items | Outfits/Day | AI Tier |
+|------|-------|-------------|---------|
+| free | 20 | 3 | basic |
+| starter | 100 | 10 | enhanced |
+| pro | 500 | Unlimited | priority |
+| unlimited | Unlimited | Unlimited | priority_ml |
+
+### Entitlement Middleware
+```javascript
+// Requires items entitlement
+POST /api/v1/ingestion/start
+
+// Requires outfits entitlement  
+POST /api/v1/outfits/generate
+POST /api/v1/outfit-trainer/generate
+```
+
+### Grace Period
+When a payment fails, users retain access for 7 days (grace period) before limits are enforced.
+
+```mermaid
+stateDiagram-v2
+    [*] --> active: Payment OK
+    active --> past_due: Payment fails
+    past_due --> active: Payment recovers (within 7 days)
+    past_due --> free: Grace period expires
+```
+
+---
+
+## Payments Architecture
+
+THREAD uses **Lago** for subscription management and **Stripe** as the payment processor.
+
+```mermaid
+flowchart TB
+    User[User] --> UI[React UI]
+    
+    subgraph THREAD["THREAD App"]
+        UI --> Checkout[Checkout]
+        UI --> Portal[Customer Portal]
+        Checkout --> API[Fastify API]
+        Portal --> API
+    end
+    
+    subgraph Billing["Billing Stack"]
+        API --> Lago[Lago Cloud]
+        API --> Entitlements[EntitlementService]
+    end
+    
+    subgraph External["External Services"]
+        Lago --> Stripe[Stripe]
+        Stripe --> Cards[Cards]
+    end
+    
+    Lago --> Webhook[Webhook]
+    Webhook --> Entitlements
+```
+
+### Billing Flow
+1. User clicks "Upgrade" → POST /billing/checkout → returns Lago checkout URL
+2. User pays on Lago/Stripe → webhook fires → entitlements updated
+3. User manages subscription → GET /billing/portal → Lago customer portal
+
+### Billing Tables
+- `entitlements` — user plan, status, limits, grace period
+- `billing_events` — webhook audit log
+
 ---
 
 ## Service Architecture
@@ -388,21 +483,31 @@ sequenceDiagram
 │   ├── index.js             # Fastify entry
 │   ├── db/
 │   │   ├── client.js        # sql.js setup
-│   │   └── migrate.js       # Migrations
+│   │   └── migrations/      # DB migrations
+│   │       ├── 001_*.js
+│   │       ├── 002_*.js
+│   │       └── ...
 │   ├── routes/              # API routes
 │   │   ├── items.js
 │   │   ├── outfits.js
 │   │   ├── ingestion.js
 │   │   ├── auth.js
+│   │   ├── billing.js       # Checkout, portal, plans
+│   │   ├── webhooks.js      # Lago webhooks
 │   │   └── ...
 │   ├── services/            # Business logic
 │   │   ├── GeminiVisionService.js
 │   │   ├── OllamaService.js
 │   │   ├── FeatureEngine.js
 │   │   ├── TrainerService.js
+│   │   ├── EntitlementService.js  # Plan limits, grace period
+│   │   ├── LagoService.js         # Lago API wrapper
+│   │   ├── StripeService.js       # Stripe API wrapper
+│   │   ├── EmailService.js       # Resend emails
 │   │   └── ...
 │   └── middleware/
-│       └── auth.js
+│       ├── auth.js
+│       └── entitlements.js  # requireEntitlement()
 ├── client/
 │   ├── src/
 │   │   ├── App.jsx
@@ -485,6 +590,8 @@ node server/index.js
 | Rate Limiting | @fastify/rate-limit |
 | Headers | @fastify/helmet |
 | HTTPS | Caddy (auto Let's Encrypt) |
+| Billing Webhooks | HMAC-SHA256 signature verification |
+| Entitlements | Server-side enforcement (never trust client) |
 
 ---
 
