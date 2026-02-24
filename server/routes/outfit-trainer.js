@@ -1,13 +1,14 @@
 import db from '../db/client.js'
 import { authenticateApiKey } from '../middleware/auth.js'
+import { requireEntitlement } from '../middleware/entitlements.js'
 import { updateItemScore } from '../services/PreferenceService.js'
 import { trainModel as nnTrainModel, blendedScoreOutfit, getTrainingStats, getUserNnWeight, clearModelCache } from '../services/TrainerService.js'
 
 export default async function outfitTrainerRoutes(fastify, opts) {
   
-  // Generate outfits with category filters
+  // Generate outfits with category filters (requires outfit entitlement)
   fastify.post('/outfit-trainer/generate', {
-    preHandler: [authenticateApiKey],
+    preHandler: [authenticateApiKey, requireEntitlement('outfits')],
     config: { rateLimit: { max: 100, timeWindow: '1 hour' } },
     schema: {
       body: {

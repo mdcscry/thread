@@ -1,5 +1,6 @@
 import db from '../db/client.js'
 import { authenticateApiKey } from '../middleware/auth.js'
+import { requireEntitlement } from '../middleware/entitlements.js'
 import OutfitEngine from '../services/OutfitEngine.js'
 import WeatherService from '../services/WeatherService.js'
 import { recordFeedback, markAsWorn } from '../services/PreferenceService.js'
@@ -16,8 +17,8 @@ export default async function outfitsRoutes(fastify, opts) {
     outfitEngine.setWeatherService(weatherService)
   }
 
-  // Generate outfits
-  fastify.post('/outfits/generate', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  // Generate outfits (requires outfit entitlement)
+  fastify.post('/outfits/generate', { preHandler: [authenticateApiKey, requireEntitlement('outfits')] }, async (request, reply) => {
     const { userId } = request.user
     
     // Check rate limit

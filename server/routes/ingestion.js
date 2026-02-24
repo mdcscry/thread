@@ -1,4 +1,5 @@
 import { authenticateApiKey } from '../middleware/auth.js'
+import { requireEntitlement } from '../middleware/entitlements.js'
 import IngestionService from '../services/IngestionService.js'
 import { RateLimitService } from '../services/RateLimitService.js'
 
@@ -9,8 +10,8 @@ export default async function ingestionRoutes(fastify, opts) {
     ingestionService = new IngestionService()
   }
 
-  // Start ingestion job
-  fastify.post('/ingestion/start', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  // Start ingestion job (requires item entitlement)
+  fastify.post('/ingestion/start', { preHandler: [authenticateApiKey, requireEntitlement('items')] }, async (request, reply) => {
     const { userId } = request.user
     const { sourceUrl, sourceType = 'google_drive', model } = request.body
     
