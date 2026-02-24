@@ -157,6 +157,13 @@ describe('ImageService', () => {
     test('throws on path with double-dot traversal', async () => {
       await expect(service.deleteImage('../../server/index.js'))
         .rejects.toThrow('path traversal')
+      expect(fs.unlink).not.toHaveBeenCalled()
+    })
+
+    test('throws on path traversal and does not call unlink', async () => {
+      await expect(service.deleteImage('../../../etc/passwd'))
+        .rejects.toThrow('path traversal')
+      expect(fs.unlink).not.toHaveBeenCalled()
     })
   })
 
@@ -202,6 +209,13 @@ describe('ImageService', () => {
       const reply = mockReply()
       await expect(service.serveImage('../../../etc/passwd', reply))
         .rejects.toThrow('path traversal')
+    })
+
+    test('re-throws non-ENOENT errors', async () => {
+      fs.readFile.mockRejectedValueOnce(Object.assign(new Error('permission denied'), { code: 'EACCES' }))
+      const reply = mockReply()
+      await expect(service.serveImage('1/valid.webp', reply))
+        .rejects.toThrow('permission denied')
     })
   })
 })
