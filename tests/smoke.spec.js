@@ -195,7 +195,7 @@ test.describe('Test Summary', () => {
     console.log(`   Total items in wardrobe: ${totalItems}`)
     
     // Get categories for all items
-    const categories: string[] = []
+    const categories = []
     for (const item of items) {
       const categoryText = await item.textContent()
       if (categoryText) {
@@ -211,7 +211,7 @@ test.describe('Test Summary', () => {
     const categoryCounts = categories.reduce((acc, cat) => {
       acc[cat] = (acc[cat] || 0) + 1
       return acc
-    }, {} as Record<string, number>)
+    }, {})
     
     console.log(`\n📦 Category counts:`)
     for (const [cat, count] of Object.entries(categoryCounts).sort()) {

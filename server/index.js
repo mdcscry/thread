@@ -230,6 +230,9 @@ const start = async () => {
   }
 }
 
+// Export for testing
+export { fastify as app }
+
 // Graceful shutdown (Render sends SIGTERM)
 async function shutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully...`)
