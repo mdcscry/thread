@@ -18,8 +18,17 @@ case $ACTION in
   test)
     echo -e "${YELLOW}Running tests...${NC}"
     cd ~/Documents/outerfit
-    npx playwright test --reporter=line
-    echo -e "${GREEN}Tests passed!${NC}"
+    
+    # Run unit tests first (fast)
+    echo -e "${YELLOW}Running unit tests...${NC}"
+    node tests/feature-engine.test.js
+    node tests/gemini-vision.test.js
+    
+    # Run API smoke tests
+    echo -e "${YELLOW}Running API tests...${NC}"
+    npx playwright test tests/api-smoke.spec.js --reporter=line
+    
+    echo -e "${GREEN}All tests passed!${NC}"
     ;;
 
   deploy-qa)

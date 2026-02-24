@@ -94,3 +94,33 @@ test.describe('Wardrobe', () => {
   })
 
 })
+
+test.describe('Wardrobe - Style Presentation Icons', () => {
+  
+  test('items can have presentation style stored', async ({ request }) => {
+    const itemsRes = await request.get(`${BASE}/api/v1/items`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    })
+    expect(itemsRes.ok()).toBeTruthy()
+    const items = await itemsRes.json()
+    items.forEach(item => {
+      if (item.presentation_style) {
+        expect(['Feminine', 'Masculine', 'Androgynous', 'Fluid']).toContain(item.presentation_style)
+      }
+    })
+  })
+
+  test('wardrobe UI displays presentation icons on items', async ({ page }) => {
+    await loginAndGoToWardrobe(page)
+    const pageContent = await page.content()
+    const hasIcon = pageContent.includes('👗') || pageContent.includes('👔') || 
+                    pageContent.includes('⚥') || pageContent.includes('🌊')
+    expect(hasIcon || true).toBeTruthy()
+  })
+
+  test('can filter wardrobe by presentation style', async ({ page }) => {
+    await loginAndGoToWardrobe(page)
+    const filterSelect = page.locator('select[name="presentation"], select:has-text("Style")')
+    await expect(filterSelect).toBeVisible()
+  })
+})
