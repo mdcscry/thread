@@ -3,34 +3,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { StripeService } from '../server/services/StripeService.js'
 
-// Mock stripe module
+// Mock stripe module - use a class constructor to properly mock `new Stripe()`
 vi.mock('stripe', () => {
-  return {
-    default: vi.fn(() => ({
-      customers: {
-        create: vi.fn(),
-      },
-      paymentIntents: {
-        create: vi.fn(),
-      },
-      paymentMethods: {
-        list: vi.fn(),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(),
-      },
-    })),
+  class MockStripe {
+    constructor() {}
+    customers = { create: vi.fn() }
+    paymentIntents = { create: vi.fn() }
+    paymentMethods = { list: vi.fn() }
+    checkout = { sessions: { create: vi.fn() } }
+    billingPortal = { sessions: { create: vi.fn() } }
+    webhooks = { constructEvent: vi.fn() }
   }
+  return { default: MockStripe }
 })
 
 describe('StripeService', () => {
@@ -194,7 +178,7 @@ describe('StripeService', () => {
 
   describe('createCheckoutSession', () => {
     it('returns dev URL when disabled', async () => {
-      const result = await svc.createCheckoutSession({
+      const result = await service.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -246,7 +230,7 @@ describe('StripeService', () => {
       const svc = new StripeService()
       svc.stripe.checkout.sessions.create.mockRejectedValue(new Error('Product not found'))
 
-      await expect(service.createCheckoutSession({
+      await expect(svc.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -274,7 +258,7 @@ describe('StripeService', () => {
 
   describe('createPortalSession', () => {
     it('returns dev URL when disabled', async () => {
-      const result = await svc.createPortalSession({
+      const result = await service.createPortalSession({
         customerId: 'cus_123',
         returnUrl: 'http://localhost:5173/billing',
       })
@@ -305,7 +289,7 @@ describe('StripeService', () => {
       const svc = new StripeService()
       svc.stripe.billingPortal.sessions.create.mockRejectedValue(new Error('Customer not found'))
 
-      await expect(service.createPortalSession({
+      await expect(svc.createPortalSession({
         customerId: 'cus_123',
         returnUrl: 'http://localhost:5173/billing',
       })).rejects.toThrow('Customer not found')
