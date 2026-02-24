@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeAll } from 'vitest'
 import request from 'supertest'
-import { app } from '../tests/setup.js'
+import { server } from '../tests/setup.js'
+const app = server
 
 describe('Auth Routes', () => {
   const testEmail = `test-${Date.now()}@example.com`

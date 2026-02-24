@@ -1,15 +1,14 @@
-export function migrate() {
-  const { prepare: db } = require('../client.js')
-  
-  // Add plan to users
-  try {
-    db(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'free'`).run()
-  } catch (e) {
-    // Column may already exist
+export async function migrate(db) {
+  if (!db) {
+    const { getDb } = await import('../client.js')
+    db = await getDb()
   }
-  
+
+  // Add plan to users
+  try { db.run(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'free'`) } catch (e) { /* already exists */ }
+
   // API usage tracking
-  db(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS api_usage (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -19,7 +18,7 @@ export function migrate() {
       FOREIGN KEY (user_id) REFERENCES users(id),
       UNIQUE(user_id, endpoint, date)
     )
-  `).run()
-  
+  `)
+
   console.log('✅ Migration 005_ai_rate_limits applied')
 }

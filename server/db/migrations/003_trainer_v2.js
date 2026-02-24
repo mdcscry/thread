@@ -15,6 +15,30 @@ export async function migrate() {
 
   const database = await getDb()
 
+  // Ensure outfit_feedback table exists before altering it
+  database.run(`
+    CREATE TABLE IF NOT EXISTS outfit_feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      outfit_id INTEGER,
+      feedback INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `)
+
+  // Ensure training_sessions table exists before altering it
+  database.run(`
+    CREATE TABLE IF NOT EXISTS training_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      samples INTEGER DEFAULT 0,
+      loss REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `)
+
   // Add new columns to outfit_feedback table
   safeAlter(database, `ALTER TABLE outfit_feedback ADD COLUMN feedback_value FLOAT;`)
   safeAlter(database, `ALTER TABLE outfit_feedback ADD COLUMN context_occasion TEXT;`)

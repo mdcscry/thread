@@ -148,7 +148,7 @@ try {
     const files = readdirSync(migrationsDir).filter(f => f.endsWith('.js')).sort()
     for (const file of files) {
       const migration = await import(path.join(migrationsDir, file))
-      if (migration.migrate) await migration.migrate()
+      if (migration.migrate) await migration.migrate(db)
     }
     console.log(`✅ ${files.length} migration(s) checked`)
   }
@@ -261,4 +261,6 @@ async function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 
-start()
+if (process.env.NODE_ENV !== 'test') {
+  start()
+}

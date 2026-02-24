@@ -1,4 +1,4 @@
-import { prepare as db } from '../db/client.js'
+import { prepare as db, getDb } from '../db/client.js'
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
 import { EmailService } from '../services/EmailService.js'
@@ -95,7 +95,8 @@ export default async function authRoutes(fastify, options) {
     `).run(email.toLowerCase(), passwordHash, firstName, apiKey, verifyToken)
 
     // Provision free tier entitlement
-    const entitlementService = new EntitlementService(db)
+    const rawDb = await getDb()
+    const entitlementService = new EntitlementService(rawDb)
     await entitlementService.provisionFree(result.lastInsertRowid)
 
     // Send verification email
