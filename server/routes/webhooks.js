@@ -23,7 +23,7 @@ export async function webhookRoutes(fastify) {
     if (process.env.WEBHOOK_LAGO_SECRET) {
       const signature = request.headers['x-lago-signature'];
       if (!signature || typeof signature !== 'string') {
-        return reply.status(401).send({ error: 'Missing signature' });
+        return reply.status(401).send({ error: 'Invalid or missing signature' });
       }
 
       const expected = crypto
