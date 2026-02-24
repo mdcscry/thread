@@ -47,9 +47,14 @@ import inviteRoutes from './routes/invites.js'
 import exportRoutes from './routes/export.js'
 import outfitTrainerRoutes from './routes/outfit-trainer.js'
 import authRoutes from './routes/auth.js'
+import billingRoutes from './routes/billing.js'
+import { webhookRoutes } from './routes/webhooks.js'
 
 // Initialize database
 import { initializeDatabase } from './db/client.js'
+
+// Initialize services
+import { EntitlementService } from './services/EntitlementService.js'
 
 // Load TLS certs if present
 const certPath = path.join(__dirname, '../certs/cert.pem')
@@ -150,6 +155,10 @@ try {
   console.error('Migration error (non-fatal):', e.message)
 }
 
+// Initialize services
+const entitlementService = new EntitlementService(db)
+fastify.decorate('entitlementService', entitlementService)
+
 // Register routes
 fastify.register(itemsRoutes, { prefix: '/api/v1' })
 fastify.register(outfitsRoutes, { prefix: '/api/v1' })
@@ -165,6 +174,8 @@ fastify.register(inviteRoutes, { prefix: '/api/v1' })
 fastify.register(exportRoutes, { prefix: '/api/v1' })
 fastify.register(outfitTrainerRoutes, { prefix: '/api/v1' })
 fastify.register(authRoutes, { prefix: '/api/v1' })
+fastify.register(billingRoutes, { prefix: '/api/v1' })
+fastify.register(webhookRoutes, { prefix: '/api/v1' })
 
 // Health check (Render uses this for zero-downtime deploys)
 fastify.get('/health', async () => {
