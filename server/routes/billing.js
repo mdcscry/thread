@@ -1,5 +1,6 @@
 // server/routes/billing.js — Checkout, portal, and entitlement endpoints
 import { lagoService } from '../services/LagoService.js';
+import { authenticateApiKey } from '../middleware/auth.js';
 
 export async function billingRoutes(fastify) {
   const { entitlementService } = fastify;
@@ -12,7 +13,7 @@ export async function billingRoutes(fastify) {
 
   // GET /billing/entitlement — Get current user's entitlement
   fastify.get('/billing/entitlement', {
-    preHandler: [fastify.authenticate],
+    preHandler: [authenticateApiKey],
   }, async (request, reply) => {
     const userId = request.user.id;
     const entitlement = await entitlementService.check(userId);
@@ -36,7 +37,7 @@ export async function billingRoutes(fastify) {
 
   // POST /billing/checkout — Create checkout session for a plan
   fastify.post('/billing/checkout', {
-    preHandler: [fastify.authenticate],
+    preHandler: [authenticateApiKey],
   }, async (request, reply) => {
     const { plan } = request.body;
     const userId = request.user.id;
@@ -93,7 +94,7 @@ export async function billingRoutes(fastify) {
 
   // GET /billing/portal — Get customer portal URL
   fastify.get('/billing/portal', {
-    preHandler: [fastify.authenticate],
+    preHandler: [authenticateApiKey],
   }, async (request, reply) => {
     const userId = request.user.id;
 

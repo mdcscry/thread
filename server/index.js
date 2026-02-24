@@ -47,11 +47,11 @@ import inviteRoutes from './routes/invites.js'
 import exportRoutes from './routes/export.js'
 import outfitTrainerRoutes from './routes/outfit-trainer.js'
 import authRoutes from './routes/auth.js'
-import billingRoutes from './routes/billing.js'
+import { billingRoutes } from './routes/billing.js'
 import { webhookRoutes } from './routes/webhooks.js'
 
 // Initialize database
-import { initializeDatabase } from './db/client.js'
+import { initializeDatabase, getDb } from './db/client.js'
 
 // Initialize services
 import { EntitlementService } from './services/EntitlementService.js'
@@ -138,6 +138,7 @@ await fastify.register(fastifyStatic, {
 
 // Initialize database (async for sql.js)
 await initializeDatabase()
+const db = await getDb()
 
 // Run migrations on startup (idempotent — safe to re-run)
 try {

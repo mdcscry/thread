@@ -1,19 +1,20 @@
 // server/services/LagoService.js — Lago API wrapper (skeleton)
 // Docs: https://docs.getlago.com/api
 
-const LAGO_API_URL = process.env.LAGO_API_URL || 'https://api.getlago.com';
-const LAGO_API_KEY = process.env.LAGO_API_KEY;
-
-const headers = LAGO_API_KEY ? {
-  'Authorization': `Bearer ${LAGO_API_KEY}`,
-  'Content-Type': 'application/json',
-} : null;
-
 export class LagoService {
   constructor() {
-    this.apiUrl = LAGO_API_URL;
-    this.apiKey = LAGO_API_KEY;
-    this.enabled = !!LAGO_API_KEY;
+    this.apiUrl = process.env.LAGO_API_URL || 'https://api.getlago.com';
+    this.apiKey = process.env.LAGO_API_KEY;
+    this.enabled = !!this.apiKey;
+  }
+
+  // Get headers with current API key
+  getHeaders() {
+    if (!this.apiKey) return null;
+    return {
+      'Authorization': `Bearer ${this.apiKey}`,
+      'Content-Type': 'application/json',
+    };
   }
 
   // Check if Lago is configured
@@ -30,7 +31,7 @@ export class LagoService {
 
     const response = await fetch(`${this.apiUrl}/v1/customers`, {
       method: 'POST',
-      headers,
+      headers: this.getHeaders(),
       body: JSON.stringify({
         customer: {
           external_id: String(userId),
@@ -46,6 +47,9 @@ export class LagoService {
     }
 
     const data = await response.json();
+    if (!data.customer) {
+      throw new Error('Lago createCustomer failed: No customer in response');
+    }
     return { lago_customer_id: data.customer.lago_id };
   }
 
@@ -58,7 +62,7 @@ export class LagoService {
 
     const response = await fetch(`${this.apiUrl}/v1/subscriptions`, {
       method: 'POST',
-      headers,
+      headers: this.getHeaders(),
       body: JSON.stringify({
         subscription: {
           customer_id: lagoCustomerId,
@@ -86,7 +90,7 @@ export class LagoService {
     // Lago uses DELETE to cancel
     const response = await fetch(
       `${this.apiUrl}/v1/subscriptions/${lagoSubscriptionId}`,
-      { method: 'DELETE', headers }
+      { method: 'DELETE', headers: this.getHeaders() }
     );
 
     if (!response.ok && response.status !== 404) {
@@ -106,7 +110,7 @@ export class LagoService {
 
     const response = await fetch(`${this.apiUrl}/v1/checkouts`, {
       method: 'POST',
-      headers,
+      headers: this.getHeaders(),
       body: JSON.stringify({
         checkout: {
           customer_id: lagoCustomerId,
@@ -134,7 +138,7 @@ export class LagoService {
 
     const response = await fetch(`${this.apiUrl}/v1/customer_portal_url`, {
       method: 'POST',
-      headers,
+      headers: this.getHeaders(),
       body: JSON.stringify({
         customer_id: lagoCustomerId,
         return_url: returnUrl,

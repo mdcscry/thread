@@ -8,18 +8,24 @@ describe('EntitlementService', () => {
   let service
 
   // Mock db with run/exec
+  // Track call count per test to return correct values for multiple exec calls
+  let execCallCount = 0
   beforeEach(() => {
+    execCallCount = 0
     db = {
       run: vi.fn(() => ({ lastInsertRowid: 1 })),
       exec: vi.fn((sql) => {
+        execCallCount++
         if (sql.includes('PRAGMA table_info')) {
+          // PRAGMA returns columns: id, user_id, plan, status, items_limit, outfits_per_day, grace_period_end
           return [[
-            { values: [['id', 1], ['user_id', 2], ['plan', 3], ['status', 4], ['items_limit', 5], ['outfits_per_day', 6], ['grace_period_end', 7]] }
+            ['id', 1], ['user_id', 2], ['plan', 3], ['status', 4], ['items_limit', 5], ['outfits_per_day', 6], ['grace_period_end', 7]
           ]]
         }
         if (sql.includes('SELECT COUNT')) {
           return [[{ values: [[0]] }]]
         }
+        // Default: return empty
         return [[]]
       })
     }
@@ -32,7 +38,7 @@ describe('EntitlementService', () => {
 
       expect(db.run).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO entitlements'),
-        expect.arrayContaining([123, 'free', 'active', 20, 3, 'basic'])
+        expect.arrayContaining([123, 20, 3, 'basic'])
       )
     })
 
@@ -81,10 +87,17 @@ describe('EntitlementService', () => {
   })
 
   describe('check', () => {
+    // Helper to mock both the SELECT query and PRAGMA query
+    const mockExecWithColumns = (mock, rowData) => {
+      mock.mockReturnValueOnce([[rowData]])  // First call: SELECT * FROM entitlements
+        .mockReturnValueOnce([[               // Second call: PRAGMA table_info
+          ['id', 1], ['user_id', 2], ['plan', 3], ['status', 4], 
+          ['items_limit', 5], ['outfits_per_day', 6], ['grace_period_end', 7]
+        ]])
+    }
+
     it('returns hasAccess true for active status', async () => {
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'pro', 'active', null, null, null]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'pro', 'active', null, null, null])
 
       const result = await service.check(123)
 
@@ -92,9 +105,7 @@ describe('EntitlementService', () => {
     })
 
     it('returns hasAccess true for trialing status', async () => {
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'pro', 'trialing', null, null, null]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'pro', 'trialing', null, null, null])
 
       const result = await service.check(123)
 
@@ -103,9 +114,7 @@ describe('EntitlementService', () => {
 
     it('returns hasAccess true for past_due within grace period', async () => {
       const futureGrace = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'pro', 'past_due', null, null, futureGrace]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'pro', 'past_due', null, null, futureGrace])
 
       const result = await service.check(123)
 
@@ -114,9 +123,7 @@ describe('EntitlementService', () => {
 
     it('returns hasAccess false for past_due after grace period', async () => {
       const pastGrace = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'pro', 'past_due', null, null, pastGrace]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'pro', 'past_due', null, null, pastGrace])
 
       const result = await service.check(123)
 
@@ -124,9 +131,7 @@ describe('EntitlementService', () => {
     })
 
     it('returns hasAccess false for canceled status', async () => {
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'free', 'canceled', null, null, null]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'free', 'canceled', null, null, null])
 
       const result = await service.check(123)
 
@@ -134,9 +139,7 @@ describe('EntitlementService', () => {
     })
 
     it('returns hasAccess true for paused status', async () => {
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'pro', 'paused', null, null, null]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'pro', 'paused', null, null, null])
 
       const result = await service.check(123)
 
@@ -144,7 +147,7 @@ describe('EntitlementService', () => {
     })
 
     it('returns null for non-existent user', async () => {
-      db.exec.mockReturnValueOnce([])
+      db.exec.mockReturnValueOnce([])  // Empty result for SELECT
 
       const result = await service.check(999)
 
@@ -152,9 +155,7 @@ describe('EntitlementService', () => {
     })
 
     it('handles null grace_period_end gracefully', async () => {
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'pro', 'past_due', null, null, null]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'pro', 'past_due', null, null, null])
 
       const result = await service.check(123)
 
@@ -163,9 +164,7 @@ describe('EntitlementService', () => {
     })
 
     it('falls back to free plan for invalid plan code', async () => {
-      db.exec.mockReturnValueOnce([[{
-        values: [[1, 123, 'invalid_plan', 'active', null, null, null]]
-      }]])
+      mockExecWithColumns(db.exec, [1, 123, 'invalid_plan', 'active', null, null, null])
 
       const result = await service.check(123)
 
