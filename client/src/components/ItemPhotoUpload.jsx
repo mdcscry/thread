@@ -88,7 +88,11 @@ export function ItemPhotoUpload({ onProcessed }) {
           )}
           <button
             className="retake-btn"
-            onClick={() => { setPreview(null); setStats(null) }}
+            onClick={() => { 
+              if (preview) URL.revokeObjectURL(preview)
+              setPreview(null); 
+              setStats(null) 
+            }}
           >
             Retake photo
           </button>

@@ -6,8 +6,6 @@ import fs from 'fs/promises'
 const IMAGES_DIR    = process.env.IMAGES_DIR || './data/images'
 const MIN_WIDTH     = 400
 const MIN_HEIGHT    = 533
-const MAX_WIDTH     = 2400
-const MAX_HEIGHT    = 3200
 const TARGET_WIDTH  = 1200
 const TARGET_HEIGHT = 1600
 
@@ -61,7 +59,11 @@ export class ImageService {
 
   // Delete image file when item is deleted
   async deleteImage(filename) {
-    const filepath = path.join(IMAGES_DIR, filename)
+    const filepath = path.resolve(path.join(IMAGES_DIR, filename))
+    const baseDir = path.resolve(IMAGES_DIR)
+    if (!filepath.startsWith(baseDir)) {
+      throw new Error('Invalid filename: path traversal attempt')
+    }
     try {
       await fs.unlink(filepath)
     } catch (err) {
@@ -71,10 +73,15 @@ export class ImageService {
 
   // Serve image with cache headers
   async serveImage(filename, reply) {
-    const filepath = path.join(IMAGES_DIR, filename)
+    const filepath = path.resolve(path.join(IMAGES_DIR, filename))
+    const baseDir = path.resolve(IMAGES_DIR)
+    if (!filepath.startsWith(baseDir)) {
+      throw new Error('Invalid filename: path traversal attempt')
+    }
+    const fileBuffer = await fs.readFile(filepath)
     return reply
       .header('Cache-Control', 'public, max-age=31536000, immutable')
       .header('Content-Type', 'image/webp')
-      .sendFile(filepath)
+      .send(fileBuffer)
   }
 }

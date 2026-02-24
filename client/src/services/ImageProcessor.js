@@ -37,8 +37,10 @@ export class ImageProcessor {
       0, 0, TARGET_WIDTH, TARGET_HEIGHT       // destination fill
     )
 
-    // Step 5 — Export as WebP
-    const blob = await this.canvasToBlob(canvas, 'image/webp', WEBP_QUALITY)
+    // Step 5 — Export as WebP (or JPEG if WebP not supported)
+    const format = this.detectWebPSupport() ? 'image/webp' : 'image/jpeg'
+    const quality = format === 'image/webp' ? WEBP_QUALITY : 0.90  // JPEG uses 0.90 quality if fallback
+    const blob = await this.canvasToBlob(canvas, format, quality)
 
     // Step 6 — Generate preview URL
     const previewUrl = URL.createObjectURL(blob)
@@ -87,9 +89,16 @@ export class ImageProcessor {
   loadImage(file) {
     return new Promise((resolve, reject) => {
       const img = new Image()
-      img.onload = () => resolve(img)
-      img.onerror = reject
-      img.src = URL.createObjectURL(file)
+      const objectUrl = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        resolve(img)
+      }
+      img.onerror = (err) => {
+        URL.revokeObjectURL(objectUrl)
+        reject(err)
+      }
+      img.src = objectUrl
     })
   }
 
@@ -101,5 +110,13 @@ export class ImageProcessor {
         quality
       )
     })
+  }
+
+  detectWebPSupport() {
+    const canvas = document.createElement('canvas')
+    if (canvas.getContext && canvas.getContext('2d')) {
+      return canvas.toDataURL('image/webp').startsWith('data:image/webp')
+    }
+    return false
   }
 }
