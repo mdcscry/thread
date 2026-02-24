@@ -20,7 +20,7 @@ export class StripeService {
       return { id: `cus_dev_${Date.now()}` };
     }
 
-    const customer = await stripe.customers.create({
+    const customer = await this.stripe.customers.create({
       email,
       name,
       metadata,
@@ -36,7 +36,7 @@ export class StripeService {
       return { id: `pi_dev_${Date.now()}`, client_secret: `pi_dev_${Date.now()}_secret` };
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await this.stripe.paymentIntents.create({
       amount,
       currency: currency || 'usd',
       customer: customerId,
@@ -55,7 +55,7 @@ export class StripeService {
       return { data: [] };
     }
 
-    const paymentMethods = await stripe.paymentMethods.list({
+    const paymentMethods = await this.stripe.paymentMethods.list({
       customer: customerId,
       type: 'card',
     });
@@ -70,7 +70,7 @@ export class StripeService {
       return { url: `http://localhost:5173/billing/success?dev=true` };
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await this.stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -89,7 +89,7 @@ export class StripeService {
       return { url: `http://localhost:5173/billing?dev=true` };
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await this.stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
