@@ -138,7 +138,7 @@ await fastify.register(fastifyStatic, {
 
 // Initialize database (async for sql.js)
 await initializeDatabase()
-const db = await getDb()
+await getDb() // ensure db connection is established
 
 // Run migrations on startup (idempotent — safe to re-run)
 try {

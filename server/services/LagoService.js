@@ -47,6 +47,9 @@ export class LagoService {
     }
 
     const data = await response.json();
+    if (!data.customer) {
+      console.warn('[LAGO] createCustomer: no customer in response', data);
+    }
     return { lago_customer_id: data.customer?.lago_id };
   }
 
