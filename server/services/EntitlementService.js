@@ -3,8 +3,8 @@
 const PLAN_LIMITS = {
   free:      { items_limit: 20,        outfits_per_day: 3,          ai_tier: 'basic' },
   starter:   { items_limit: 100,       outfits_per_day: 10,         ai_tier: 'enhanced' },
-  pro:       { items_limit: 500,       outfits_per_day: Infinity,   ai_tier: 'priority' },
-  unlimited: { items_limit: Infinity,  outfits_per_day: Infinity,   ai_tier: 'priority_ml' },
+  pro:       { items_limit: 500,       outfits_per_day: 999999,     ai_tier: 'priority' },
+  unlimited: { items_limit: 999999,    outfits_per_day: 999999,     ai_tier: 'priority_ml' },
 };
 
 export class EntitlementService {
@@ -82,7 +82,7 @@ export class EntitlementService {
   // Get user's item count
   async getItemCount(userId) {
     const result = this.db.exec(`
-      SELECT COUNT(*) as count FROM items WHERE user_id = ?
+      SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ?
     `, [userId]);
     return result?.[0]?.values?.[0]?.[0] || 0;
   }

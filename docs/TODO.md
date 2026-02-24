@@ -4,7 +4,7 @@
 
 ## 🚧 In Progress
 
-- **VPS deployment** — awaiting DatabaseMart provisioning (order #5148848963)
+- **VPS deployment** — awaiting DatabaseMart provisioning (order #<redacted>)
 
 ## 🔴 Priority 1 — Before First User
 

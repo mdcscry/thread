@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
 
 export default function PasswordReset({ onReset, isVerifyEmail }) {
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const token = searchParams.get('token')
+  // Parse token from URL without React Router
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token')
   
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -74,9 +73,9 @@ export default function PasswordReset({ onReset, isVerifyEmail }) {
       if (res.ok) {
         if (isVerifyMode) {
           setSuccess(true)
-          setTimeout(() => navigate('/?message=email-verified'), 2000)
+          setTimeout(() => { window.location.href = '/?message=email-verified' }, 2000)
         } else {
-          onReset ? onReset() : navigate('/?message=password-reset')
+          onReset ? onReset() : (window.location.href = '/?message=password-reset')
         }
       } else {
         setError(data.error || (isVerifyMode ? 'Failed to verify email' : 'Failed to reset password'))
@@ -94,7 +93,7 @@ export default function PasswordReset({ onReset, isVerifyEmail }) {
         <div className="card" style={{ maxWidth: 400, margin: '100px auto', textAlign: 'center' }}>
           <h2>✅ {isVerifyMode ? 'Email Verified!' : 'Password Reset!'}</h2>
           <p>{isVerifyMode ? 'Your email has been verified.' : 'Your password has been reset.'}</p>
-          <button onClick={() => navigate('/')}>Go to login</button>
+          <button onClick={() => { window.location.href = '/' }}>Go to login</button>
         </div>
       </div>
     )

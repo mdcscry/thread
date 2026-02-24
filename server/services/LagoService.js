@@ -105,7 +105,8 @@ export class LagoService {
   async createCheckout({ lagoCustomerId, planCode, successUrl, cancelUrl }) {
     if (!this.enabled) {
       // Dev mode: return a dummy URL
-      return { checkout_url: `http://localhost:5173/billing/success?plan=${planCode}&dev=true` };
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5173'
+      return { checkout_url: `${baseUrl}/billing/success?plan=${planCode}&dev=true` };
     }
 
     const response = await fetch(`${this.apiUrl}/v1/checkouts`, {
@@ -133,7 +134,8 @@ export class LagoService {
   // Get customer portal URL (for self-service billing management)
   async createPortalUrl({ lagoCustomerId, returnUrl }) {
     if (!this.enabled) {
-      return { portal_url: `http://localhost:5173/billing?dev=true` };
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5173'
+      return { portal_url: `${baseUrl}/billing?dev=true` };
     }
 
     const response = await fetch(`${this.apiUrl}/v1/customer_portal_url`, {

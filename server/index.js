@@ -157,6 +157,7 @@ try {
 }
 
 // Initialize services
+const db = await getDb()
 fastify.decorate('db', db)
 const entitlementService = new EntitlementService(db)
 fastify.decorate('entitlementService', entitlementService)

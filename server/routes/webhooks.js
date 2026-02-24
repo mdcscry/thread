@@ -1,6 +1,5 @@
 // server/routes/webhooks.js — Lago webhook handler
 import crypto from 'crypto';
-import { lagoService } from '../services/LagoService.js';
 
 // Helper: get user ID by lago customer ID
 async function getUserIdByLagoCustomer(db, lagoCustomerId) {
@@ -15,7 +14,7 @@ async function getUserIdByLagoCustomer(db, lagoCustomerId) {
 export async function webhookRoutes(fastify) {
 
   // Lago webhook
-  fastify.post('/api/v1/webhooks/lago', {
+  fastify.post('/webhooks/lago', {
     config: { rawBody: true }  // need raw body for signature verification
   }, async (request, reply) => {
 
@@ -44,7 +43,7 @@ export async function webhookRoutes(fastify) {
         return reply.status(401).send({ error: 'Invalid signature' });
       }
     } else {
-      console.log(`[WEBHOOK] [DEV] Skipping signature verification`);
+      fastify.log.info(`[WEBHOOK] [DEV] Skipping signature verification`);
     }
 
     const { webhook_type, object } = request.body;
@@ -74,7 +73,7 @@ async function handleLagoEvent(fastify, type, object) {
   const userId = await getUserIdByLagoCustomer(fastify.db, object?.customer?.lago_id);
 
   if (!userId) {
-    console.log(`[WEBHOOK] No user found for lago_customer: ${object?.customer?.lago_id}`);
+    fastify.log.info(`[WEBHOOK] No user found for lago_customer: ${object?.customer?.lago_id}`);
     return;
   }
 
@@ -90,12 +89,12 @@ async function handleLagoEvent(fastify, type, object) {
         currentPeriodEnd: object.next_plan_change_date,
         gracePeriodEnd: null,
       });
-      console.log(`[WEBHOOK] Subscription started: user=${userId}, plan=${object.plan?.code}`);
+      fastify.log.info(`[WEBHOOK] Subscription started: user=${userId}, plan=${object.plan?.code}`);
       break;
 
     case 'subscription.trial_ended':
       // If they had a trial, it either transitions to active (if paid) or stays as-is
-      console.log(`[WEBHOOK] Trial ended: user=${userId}`);
+      fastify.log.info(`[WEBHOOK] Trial ended: user=${userId}`);
       break;
 
     case 'subscription.upgraded':
@@ -106,7 +105,7 @@ async function handleLagoEvent(fastify, type, object) {
         currentPeriodEnd: object.next_plan_change_date,
         gracePeriodEnd: null,
       });
-      console.log(`[WEBHOOK] Subscription upgraded: user=${userId}, plan=${object.plan?.code}`);
+      fastify.log.info(`[WEBHOOK] Subscription upgraded: user=${userId}, plan=${object.plan?.code}`);
       break;
 
     case 'subscription.downgraded':
@@ -117,7 +116,7 @@ async function handleLagoEvent(fastify, type, object) {
         status: 'active',
         currentPeriodEnd: object.next_plan_change_date,
       });
-      console.log(`[WEBHOOK] Subscription downgraded: user=${userId}, plan=${object.plan?.code}`);
+      fastify.log.info(`[WEBHOOK] Subscription downgraded: user=${userId}, plan=${object.plan?.code}`);
       break;
 
     case 'subscription.terminated':
@@ -132,7 +131,7 @@ async function handleLagoEvent(fastify, type, object) {
         gracePeriodEnd: null,
         currentPeriodEnd: null,
       });
-      console.log(`[WEBHOOK] Subscription terminated: user=${userId}, dropped to free`);
+      fastify.log.info(`[WEBHOOK] Subscription terminated: user=${userId}, dropped to free`);
       break;
 
     case 'invoice.payment_failure':
@@ -145,7 +144,7 @@ async function handleLagoEvent(fastify, type, object) {
         status: 'past_due',
         gracePeriodEnd: grace.toISOString(),
       });
-      console.log(`[WEBHOOK] Payment failed: user=${userId}, grace until ${grace.toISOString()}`);
+      fastify.log.info(`[WEBHOOK] Payment failed: user=${userId}, grace until ${grace.toISOString()}`);
       break;
 
     case 'invoice.payment_success':

@@ -100,7 +100,12 @@ export default async function authRoutes(fastify, options) {
 
     // Send verification email
     const verifyUrl = `${process.env.APP_URL || 'http://localhost:5173'}/verify-email?token=${verifyToken}`
-    await EmailService.sendVerification({ to: email, verifyUrl })
+    try {
+      await EmailService.sendVerification({ to: email, verifyUrl })
+    } catch (err) {
+      console.error('Failed to send verification email:', err)
+      // Continue anyway — user is registered, just email delivery failed
+    }
 
     return reply.code(201).send({
       userId: result.lastInsertRowid,
@@ -199,7 +204,12 @@ export default async function authRoutes(fastify, options) {
 
     // Send reset email
     const resetUrl = `${process.env.APP_URL || 'http://localhost:5173'}/reset-password?token=${token}`
-    await EmailService.sendPasswordReset({ to: email, resetUrl })
+    try {
+      await EmailService.sendPasswordReset({ to: email, resetUrl })
+    } catch (err) {
+      console.error('Failed to send password reset email:', err)
+      // Continue anyway — token is created, just email delivery failed
+    }
 
     return reply.send({ sent: true })
   })
@@ -217,6 +227,12 @@ export default async function authRoutes(fastify, options) {
       }
     }
   }, async (request, reply) => {
+    // Rate limit check
+    const clientIp = request.ip || request.headers['x-forwarded-for'] || 'unknown'
+    if (!checkRateLimit(clientIp)) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.' })
+    }
+
     const { token, password } = request.body
 
     const record = db(`
@@ -247,6 +263,12 @@ export default async function authRoutes(fastify, options) {
       }
     }
   }, async (request, reply) => {
+    // Rate limit check
+    const clientIp = request.ip || request.headers['x-forwarded-for'] || 'unknown'
+    if (!checkRateLimit(clientIp)) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.' })
+    }
+
     const { token } = request.body
 
     const user = db('SELECT id FROM users WHERE email_verify_token = ?').get(token)

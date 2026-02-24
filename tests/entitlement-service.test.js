@@ -61,13 +61,13 @@ describe('EntitlementService', () => {
       expect(plans).toContainEqual({
         plan: 'pro',
         items_limit: 500,
-        outfits_per_day: Infinity,
+        outfits_per_day: 999999,
         ai_tier: 'priority'
       })
       expect(plans).toContainEqual({
         plan: 'unlimited',
-        items_limit: Infinity,
-        outfits_per_day: Infinity,
+        items_limit: 999999,
+        outfits_per_day: 999999,
         ai_tier: 'priority_ml'
       })
     })
