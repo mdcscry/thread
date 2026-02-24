@@ -6,6 +6,19 @@
 
 - **VPS deployment** — awaiting DatabaseMart provisioning (order #5148848963)
 
+## 🔴 Priority 1 — Before First User
+
+- ~~**Sentry error monitoring** — @sentry/node + @sentry/react~~
+- **Backup to R2** — Cloudflare R2 + rclone + cron
+- **GDPR compliance** — data export + account deletion
+
+## 🟡 Priority 2 — Before Launch
+
+- **Password Reset** — /auth/forgot-password, /auth/reset-password
+- **Email Verification** — verify email on signup
+- **Resend transactional email** — welcome, password reset, billing
+- **AI rate limiting** — per-user, per-plan limits on Gemini calls
+
 ## 📋 Backlog
 
 ### Nice to Have

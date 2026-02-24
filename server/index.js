@@ -12,6 +12,16 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+// Sentry error monitoring
+import * as Sentry from '@sentry/node'
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.2,
+  })
+}
+
 // Prevent unhandled rejections from crashing the server
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled rejection:', reason)
@@ -185,6 +195,15 @@ fastify.get('/ca.crt', async (request, reply) => {
   } catch {
     return reply.status(404).send('CA cert not found')
   }
+})
+
+// Sentry error handler
+fastify.setErrorHandler((error, request, reply) => {
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(error)
+  }
+  fastify.log.error(error)
+  reply.status(500).send({ error: 'Internal server error' })
 })
 
 // Root - serve index.html for SPA
