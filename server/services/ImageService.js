@@ -59,9 +59,10 @@ export class ImageService {
 
   // Delete image file when item is deleted
   async deleteImage(filename) {
-    const filepath = path.resolve(path.join(IMAGES_DIR, filename))
-    const baseDir = path.resolve(IMAGES_DIR) + path.sep
-    if (!filepath.startsWith(baseDir)) {
+    const baseDirResolved = path.resolve(IMAGES_DIR)
+    const filepath = path.resolve(path.join(baseDirResolved, filename))
+    const relative = path.relative(baseDirResolved, filepath)
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
       throw new Error('Invalid filename: path traversal attempt')
     }
     try {
@@ -73,14 +74,16 @@ export class ImageService {
 
   // Serve image with cache headers
   async serveImage(filename, reply) {
-    const filepath = path.resolve(path.join(IMAGES_DIR, filename))
-    const baseDir = path.resolve(IMAGES_DIR) + path.sep
-    if (!filepath.startsWith(baseDir)) {
+    const baseDirResolved = path.resolve(IMAGES_DIR)
+    const filepath = path.resolve(path.join(baseDirResolved, filename))
+    const relative = path.relative(baseDirResolved, filepath)
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
       throw new Error('Invalid filename: path traversal attempt')
     }
     try {
       const fileBuffer = await fs.readFile(filepath)
-      const contentType = filename.endsWith('.jpg') || filename.endsWith('.jpeg') 
+      const lowerFilename = filename.toLowerCase()
+      const contentType = lowerFilename.endsWith('.jpg') || lowerFilename.endsWith('.jpeg') 
         ? 'image/jpeg' 
         : 'image/webp'
       return reply
