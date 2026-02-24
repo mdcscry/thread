@@ -36,6 +36,7 @@ import onboardingRoutes from './routes/onboarding.js'
 import inviteRoutes from './routes/invites.js'
 import exportRoutes from './routes/export.js'
 import outfitTrainerRoutes from './routes/outfit-trainer.js'
+import authRoutes from './routes/auth.js'
 
 // Initialize database
 import { initializeDatabase } from './db/client.js'
@@ -153,6 +154,7 @@ fastify.register(onboardingRoutes, { prefix: '/api/v1' })
 fastify.register(inviteRoutes, { prefix: '/api/v1' })
 fastify.register(exportRoutes, { prefix: '/api/v1' })
 fastify.register(outfitTrainerRoutes, { prefix: '/api/v1' })
+fastify.register(authRoutes, { prefix: '/api/v1' })
 
 // Health check (Render uses this for zero-downtime deploys)
 fastify.get('/health', async () => {
