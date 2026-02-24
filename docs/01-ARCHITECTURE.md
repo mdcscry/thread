@@ -84,6 +84,7 @@
 | **LLM** | MiniMax M2.5 | Text generation | API cost |
 | **LLM** | Ollama (llama3.2:3b) | Local text generation | N/A |
 | **AI Code Review** | Claude Code (roborev) | Auto code review | Credits |
+| **Billing** | Stripe | Payments, subscriptions | Pay per use |
 | **Backup** | Cloudflare R2 | Offsite backups | 10GB/mo |
 | **Error Monitoring** | Sentry | Error tracking | 5k/mo |
 
