@@ -32,10 +32,14 @@ export async function webhookRoutes(fastify) {
         .digest('hex');
 
       // Timing-safe comparison to prevent timing attacks
-      const sigBuffer = Buffer.from(signature, 'hex');
-      const expectedBuffer = Buffer.from(expected, 'hex');
-      if (sigBuffer.length !== expectedBuffer.length || 
-          !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+      try {
+        const sigBuffer = Buffer.from(signature, 'hex');
+        const expectedBuffer = Buffer.from(expected, 'hex');
+        if (sigBuffer.length !== expectedBuffer.length || 
+            !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+          return reply.status(401).send({ error: 'Invalid signature' });
+        }
+      } catch {
         return reply.status(401).send({ error: 'Invalid signature' });
       }
     } else {

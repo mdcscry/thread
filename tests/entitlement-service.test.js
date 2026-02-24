@@ -9,13 +9,10 @@ describe('EntitlementService', () => {
 
   // Mock db with run/exec
   // Track call count per test to return correct values for multiple exec calls
-  let execCallCount = 0
   beforeEach(() => {
-    execCallCount = 0
     db = {
       run: vi.fn(() => ({ lastInsertRowid: 1 })),
       exec: vi.fn((sql) => {
-        execCallCount++
         if (sql.includes('PRAGMA table_info')) {
           // PRAGMA returns columns: id, user_id, plan, status, items_limit, outfits_per_day, grace_period_end
           return [[
