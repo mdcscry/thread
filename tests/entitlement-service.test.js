@@ -158,7 +158,7 @@ describe('EntitlementService', () => {
     it('returns null for non-existent user', async () => {
       db.exec.mockReturnValueOnce([])  // Empty result for SELECT
 
-      const result = await service.check(999)
+      const result = await service.check(999) // userId 999 = non-existent user
 
       expect(result).toBeNull()
     })
