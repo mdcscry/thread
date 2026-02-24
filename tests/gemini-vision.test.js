@@ -57,7 +57,6 @@ test('respects GEMINI_MODEL env var', () => {
 
 // ── JSON Parsing (test the parsing logic extracted from the service) ────────
 
-console.log('\nJSON parsing resilience:')
 
 // Extract the parsing logic into a testable function
 function parseGeminiResponse(text) {
@@ -130,7 +129,6 @@ test('throws on empty string', () => {
 
 // ── Field Normalization ─────────────────────────────────────────────────────
 
-console.log('\nField normalization:')
 
 // Simulate what the service does after parsing
 function normalizeStructured(raw) {
@@ -216,7 +214,6 @@ test('occasion defaults to [casual]', () => {
 
 // ── Error handling ──────────────────────────────────────────────────────────
 
-console.log('\nError handling:')
 
 test('throws when no API key set', async () => {
   delete process.env.GEMINI_API_KEY

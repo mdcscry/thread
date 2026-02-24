@@ -39,7 +39,6 @@ function approx(a, b, tolerance = 0.01) {
 
 // ── parseHex ────────────────────────────────────────────────────────────────
 
-console.log('\nparseHex:')
 
 test('parses 6-digit hex', () => {
   const c = parseHex('#ff0000')
@@ -67,7 +66,6 @@ test('returns gray for garbage input', () => {
 
 // ── rgbToHSL ────────────────────────────────────────────────────────────────
 
-console.log('\nrgbToHSL:')
 
 test('pure red → h=0, s=1, l=0.5', () => {
   const hsl = rgbToHSL(255, 0, 0)
@@ -100,7 +98,6 @@ test('black → s=0, l=0', () => {
 
 // ── normalizeRGB / normalizeHSL ─────────────────────────────────────────────
 
-console.log('\nnormalizeRGB/HSL:')
 
 test('normalizeRGB returns values in [0,1]', () => {
   const rgb = normalizeRGB('#804020')
@@ -116,7 +113,6 @@ test('normalizeHSL returns values in [0,1]', () => {
 
 // ── oneHot ──────────────────────────────────────────────────────────────────
 
-console.log('\noneHot:')
 
 test('encodes known value', () => {
   const vec = oneHot('casual', OCCASIONS)
@@ -142,7 +138,6 @@ test('case insensitive', () => {
 
 // ── oneHotCategory ──────────────────────────────────────────────────────────
 
-console.log('\noneHotCategory:')
 
 test('encodes direct category', () => {
   const vec = oneHotCategory('T-Shirt')
@@ -164,7 +159,6 @@ test('maps alias (Heels → Boots)', () => {
 
 // ── computeColorHarmony ─────────────────────────────────────────────────────
 
-console.log('\ncomputeColorHarmony:')
 
 test('complementary colors (red + cyan) score high', () => {
   const item = { primary_color: '#ff0000' }  // red: h=0
@@ -215,7 +209,6 @@ test('no peers → 0.5 (neutral)', () => {
 
 // ── computeFormalityMatch ───────────────────────────────────────────────────
 
-console.log('\ncomputeFormalityMatch:')
 
 test('hoodie + formal = poor match', () => {
   const score = computeFormalityMatch({ category: 'Hoodie' }, { occasion: 'formal' })
@@ -245,7 +238,6 @@ test('no context → uses default formality 5', () => {
 
 // ── computeCategoryDiversity ────────────────────────────────────────────────
 
-console.log('\ncomputeCategoryDiversity:')
 
 test('all unique categories → 1.0', () => {
   const peers = [
@@ -271,7 +263,6 @@ test('no peers → 0.5', () => {
 
 // ── computeAvgPeerEma ───────────────────────────────────────────────────────
 
-console.log('\ncomputeAvgPeerEma:')
 
 test('averages peer scores', () => {
   const peers = [{ ema_score: 0.8 }, { ema_score: 0.6 }]
@@ -289,7 +280,6 @@ test('no peers → 0.5', () => {
 
 // ── computeItemFeatures (integration) ───────────────────────────────────────
 
-console.log('\ncomputeItemFeatures:')
 
 test('produces correct dimension vector', () => {
   const item = {
