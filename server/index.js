@@ -138,7 +138,7 @@ await fastify.register(fastifyStatic, {
 
 // Initialize database (async for sql.js)
 await initializeDatabase()
-await getDb() // ensure db connection is established
+const db = await getDb() // ensure db connection is established and get instance
 
 // Run migrations on startup (idempotent — safe to re-run)
 try {
@@ -157,7 +157,6 @@ try {
 }
 
 // Initialize services
-const db = await getDb()
 fastify.decorate('db', db)
 const entitlementService = new EntitlementService(db)
 fastify.decorate('entitlementService', entitlementService)
