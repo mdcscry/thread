@@ -155,7 +155,7 @@ async function handleLagoEvent(fastify, type, object) {
         gracePeriodEnd: null,
         currentPeriodEnd: object.subscription?.next_plan_change_date,
       });
-      console.log(`[WEBHOOK] Payment success: user=${userId}`);
+      fastify.log.info(`[WEBHOOK] Payment success: user=${userId}`);
       break;
 
     case 'customer.payment_provider_created':
@@ -165,12 +165,12 @@ async function handleLagoEvent(fastify, type, object) {
           UPDATE entitlements SET stripe_customer_id = ?, updated_at = CURRENT_TIMESTAMP
           WHERE lago_customer_id = ?
         `, [object.customer.stripe_customer_id, object.customer.lago_id]);
-        console.log(`[WEBHOOK] Stripe customer linked: ${object.customer.stripe_customer_id}`);
+        fastify.log.info(`[WEBHOOK] Stripe customer linked: ${object.customer.stripe_customer_id}`);
       }
       break;
 
     default:
-      console.log(`[WEBHOOK] Unhandled event type: ${type}`);
+      fastify.log.info(`[WEBHOOK] Unhandled event type: ${type}`);
       break;
   }
 }
