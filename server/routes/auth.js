@@ -148,4 +148,78 @@ export default async function authRoutes(fastify, options) {
       apiKey
     })
   })
+
+  // POST /auth/forgot-password
+  fastify.post('/auth/forgot-password', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { email } = request.body
+    
+    // Rate limit check
+    const clientIp = request.ip || request.headers['x-forwarded-for'] || 'unknown'
+    if (!checkRateLimit(clientIp)) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.' })
+    }
+    
+    // Always return 200 — never reveal whether email exists
+    const user = db('SELECT id FROM users WHERE email = ?').get(email.toLowerCase())
+    if (!user) {
+      return reply.send({ sent: true })
+    }
+    
+    // Generate reset token
+    const token = crypto.randomBytes(32).toString('hex')
+    const expires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    
+    db(`
+      INSERT INTO password_reset_tokens (user_id, token, expires_at)
+      VALUES (?, ?, ?)
+    `).run(user.id, token, expires.toISOString())
+    
+    // TODO: Send email with reset link
+    // For now, return the token (dev mode)
+    const resetUrl = `${process.env.APP_URL || 'http://localhost:5173'}/reset-password?token=${token}`
+    console.log(`🔐 Password reset: ${resetUrl}`)
+    
+    return reply.send({ sent: true })
+  })
+
+  // POST /auth/reset-password
+  fastify.post('/auth/reset-password', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['token', 'password'],
+        properties: {
+          token: { type: 'string', minLength: 64, maxLength: 64 },
+          password: { type: 'string', minLength: 8 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { token, password } = request.body
+    
+    const record = db(`
+      SELECT user_id FROM password_reset_tokens
+      WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+    `).get(token)
+    
+    if (!record) {
+      return reply.status(400).send({ error: 'Invalid or expired reset link.' })
+    }
+    
+    const hashed = await bcrypt.hash(password, 10)
+    db('UPDATE users SET password = ? WHERE id = ?').run(hashed, record.user_id)
+    db('UPDATE password_reset_tokens SET used = 1 WHERE token = ?').run(token)
+    
+    return reply.send({ reset: true })
+  })
 }

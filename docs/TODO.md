@@ -14,7 +14,7 @@
 
 ## 🟡 Priority 2 — Before Launch
 
-- **Password Reset** — /auth/forgot-password, /auth/reset-password
+- ~~**Password Reset** — /auth/forgot-password, /auth/reset-password~~
 - **Email Verification** — verify email on signup
 - **Resend transactional email** — welcome, password reset, billing
 - **AI rate limiting** — per-user, per-plan limits on Gemini calls
