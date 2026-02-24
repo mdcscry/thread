@@ -60,7 +60,7 @@ export class ImageService {
   // Delete image file when item is deleted
   async deleteImage(filename) {
     const filepath = path.resolve(path.join(IMAGES_DIR, filename))
-    const baseDir = path.resolve(IMAGES_DIR)
+    const baseDir = path.resolve(IMAGES_DIR) + path.sep
     if (!filepath.startsWith(baseDir)) {
       throw new Error('Invalid filename: path traversal attempt')
     }
@@ -74,14 +74,24 @@ export class ImageService {
   // Serve image with cache headers
   async serveImage(filename, reply) {
     const filepath = path.resolve(path.join(IMAGES_DIR, filename))
-    const baseDir = path.resolve(IMAGES_DIR)
+    const baseDir = path.resolve(IMAGES_DIR) + path.sep
     if (!filepath.startsWith(baseDir)) {
       throw new Error('Invalid filename: path traversal attempt')
     }
-    const fileBuffer = await fs.readFile(filepath)
-    return reply
-      .header('Cache-Control', 'public, max-age=31536000, immutable')
-      .header('Content-Type', 'image/webp')
-      .send(fileBuffer)
+    try {
+      const fileBuffer = await fs.readFile(filepath)
+      const contentType = filename.endsWith('.jpg') || filename.endsWith('.jpeg') 
+        ? 'image/jpeg' 
+        : 'image/webp'
+      return reply
+        .header('Cache-Control', 'public, max-age=31536000, immutable')
+        .header('Content-Type', contentType)
+        .send(fileBuffer)
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        return reply.code(404).send({ error: 'Image not found' })
+      }
+      throw err
+    }
   }
 }

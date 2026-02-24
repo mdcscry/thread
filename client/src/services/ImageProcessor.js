@@ -5,6 +5,7 @@ const WEBP_QUALITY  = 0.85
 const MAX_FILE_SIZE = 2 * 1024 * 1024  // 2MB
 
 export class ImageProcessor {
+  static #webPSupported = null
 
   /**
    * Full pipeline: validate → auto-crop to 3:4 → resize → compress to WebP
@@ -113,10 +114,15 @@ export class ImageProcessor {
   }
 
   detectWebPSupport() {
-    const canvas = document.createElement('canvas')
-    if (canvas.getContext && canvas.getContext('2d')) {
-      return canvas.toDataURL('image/webp').startsWith('data:image/webp')
+    if (ImageProcessor.#webPSupported !== null) {
+      return ImageProcessor.#webPSupported
     }
-    return false
+    const canvas = document.createElement('canvas')
+    let supported = false
+    if (canvas.getContext && canvas.getContext('2d')) {
+      supported = canvas.toDataURL('image/webp').startsWith('data:image/webp')
+    }
+    ImageProcessor.#webPSupported = supported
+    return supported
   }
 }
