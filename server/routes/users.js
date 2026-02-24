@@ -124,6 +124,9 @@ export default async function usersRoutes(fastify, opts) {
     db.prepare('DELETE FROM outfit_items WHERE outfit_id IN (SELECT id FROM outfits WHERE user_id = ?)').run(userId)
     db.prepare('DELETE FROM outfits WHERE user_id = ?').run(userId)
     db.prepare('DELETE FROM clothing_items WHERE user_id = ?').run(userId)
+    // Billing data
+    db.prepare('DELETE FROM billing_events WHERE user_id = ?').run(userId)
+    db.prepare('DELETE FROM entitlements WHERE user_id = ?').run(userId)
     db.prepare('DELETE FROM users WHERE id = ?').run(userId)
     
     return { deleted: true, userId }

@@ -31,8 +31,11 @@ export async function webhookRoutes(fastify) {
         .update(request.rawBody)
         .digest('hex');
 
-      // Timing-safe comparison would be better, but this works for now
-      if (signature !== expected) {
+      // Timing-safe comparison to prevent timing attacks
+      const sigBuffer = Buffer.from(signature, 'hex');
+      const expectedBuffer = Buffer.from(expected, 'hex');
+      if (sigBuffer.length !== expectedBuffer.length || 
+          !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
         return reply.status(401).send({ error: 'Invalid signature' });
       }
     } else {

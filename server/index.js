@@ -156,6 +156,7 @@ try {
 }
 
 // Initialize services
+fastify.decorate('db', db)
 const entitlementService = new EntitlementService(db)
 fastify.decorate('entitlementService', entitlementService)
 

@@ -4,14 +4,14 @@ import { lagoService } from '../services/LagoService.js';
 export async function billingRoutes(fastify) {
   const { entitlementService } = fastify;
 
-  // GET /api/v1/billing/plans — List available plans
-  fastify.get('/api/v1/billing/plans', async (request, reply) => {
+  // GET /billing/plans — List available plans
+  fastify.get('/billing/plans', async (request, reply) => {
     const plans = entitlementService.getPlans();
     return { plans };
   });
 
-  // GET /api/v1/billing/entitlement — Get current user's entitlement
-  fastify.get('/api/v1/billing/entitlement', {
+  // GET /billing/entitlement — Get current user's entitlement
+  fastify.get('/billing/entitlement', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const userId = request.user.id;
@@ -34,8 +34,8 @@ export async function billingRoutes(fastify) {
     };
   });
 
-  // POST /api/v1/billing/checkout — Create checkout session for a plan
-  fastify.post('/api/v1/billing/checkout', {
+  // POST /billing/checkout — Create checkout session for a plan
+  fastify.post('/billing/checkout', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const { plan } = request.body;
@@ -91,8 +91,8 @@ export async function billingRoutes(fastify) {
     }
   });
 
-  // GET /api/v1/billing/portal — Get customer portal URL
-  fastify.get('/api/v1/billing/portal', {
+  // GET /billing/portal — Get customer portal URL
+  fastify.get('/billing/portal', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const userId = request.user.id;

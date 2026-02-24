@@ -1,12 +1,12 @@
 // server/services/StripeService.js — Stripe API wrapper (skeleton)
 // Docs: https://stripe.com/docs/api
 
-const Stripe = require('stripe');
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+import Stripe from 'stripe';
 
 export class StripeService {
   constructor() {
-    this.enabled = !!stripe;
+    this.stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+    this.enabled = !!this.stripe;
   }
 
   isEnabled() {
