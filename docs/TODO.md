@@ -9,8 +9,8 @@
 ## 🔴 Priority 1 — Before First User
 
 - ~~**Sentry error monitoring** — @sentry/node + @sentry/react~~
-- **Backup to R2** — Cloudflare R2 + rclone + cron
-- **GDPR compliance** — data export + account deletion
+- ~~**Backup to R2** — stubbed (scripts/backup-r2.sh, needs R2 credentials)~~
+- ~~**GDPR compliance** — data export + account deletion~~
 
 ## 🟡 Priority 2 — Before Launch
 
