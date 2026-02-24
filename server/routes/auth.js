@@ -1,6 +1,7 @@
 import { prepare as db } from '../db/client.js'
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
+import { EmailService } from '../services/EmailService.js'
 
 // Rate limiting (simple in-memory)
 const rateLimitMap = new Map()
@@ -184,10 +185,9 @@ export default async function authRoutes(fastify, options) {
       VALUES (?, ?, ?)
     `).run(user.id, token, expires.toISOString())
     
-    // TODO: Send email with reset link
-    // For now, return the token (dev mode)
+    // Send reset email
     const resetUrl = `${process.env.APP_URL || 'http://localhost:5173'}/reset-password?token=${token}`
-    console.log(`🔐 Password reset: ${resetUrl}`)
+    await EmailService.sendPasswordReset({ to: email, resetUrl })
     
     return reply.send({ sent: true })
   })
