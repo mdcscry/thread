@@ -2,12 +2,17 @@ import { authenticateApiKey } from '../middleware/auth.js'
 import { requireEntitlement } from '../middleware/entitlements.js'
 import IngestionService from '../services/IngestionService.js'
 import { RateLimitService } from '../services/RateLimitService.js'
+import { ImageService } from '../services/ImageService.js'
 
 let ingestionService = null
+let imageService = null
 
 export default async function ingestionRoutes(fastify, opts) {
   if (!ingestionService) {
     ingestionService = new IngestionService()
+  }
+  if (!imageService) {
+    imageService = new ImageService()
   }
 
   // Start ingestion job (requires item entitlement)
@@ -80,7 +85,7 @@ export default async function ingestionRoutes(fastify, opts) {
   })
 
   // Upload single photo (camera companion)
-  fastify.post('/ingestion/upload-photo', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  fastify.post('/ingestion/upload-photo', { preHandler: [authenticateApiKey], config: { limits: { fileSize: 2 * 1024 * 1024 } } }, async (request, reply) => {
     const { userId } = request.user
     
     try {
@@ -89,16 +94,24 @@ export default async function ingestionRoutes(fastify, opts) {
         return reply.code(400).send({ error: 'No file uploaded' })
       }
 
+      if (!data.mimetype.startsWith('image/')) {
+        return reply.code(400).send({ error: 'File must be an image' })
+      }
+
       const buffer = await data.toBuffer()
-      const itemId = await ingestionService.processSinglePhoto(userId, buffer, data.filename)
+      const result = await imageService.processAndStore(buffer, userId)
       
       return { 
-        success: true, 
-        itemId,
-        message: 'Photo analyzed and added to wardrobe'
+        filename: result.filename,
+        size: result.size,
+        width: result.width,
+        height: result.height,
       }
     } catch (err) {
       console.error('Upload error:', err)
+      if (err.message.includes('too small')) {
+        return reply.code(422).send({ error: err.message, code: 'IMAGE_TOO_SMALL' })
+      }
       return reply.code(500).send({ error: err.message })
     }
   })
