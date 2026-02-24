@@ -112,7 +112,11 @@ await app.ready()
 // Cleanup test DB file on process exit
 const testDbPath = process.env.DATABASE_PATH
 process.on('exit', () => {
-  try { if (testDbPath && testDbPath.startsWith('/tmp/')) rmSync(testDbPath, { force: true }) } catch {}
+  try {
+    if (testDbPath && testDbPath.startsWith('/tmp/')) rmSync(testDbPath, { force: true })
+  } catch (e) {
+    console.warn('Failed to clean up test DB:', e.message)
+  }
 })
 
 // supertest needs the underlying http.Server

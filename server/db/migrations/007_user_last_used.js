@@ -1,7 +1,7 @@
 // Migration: Add last_used column to users table
 // Required for login API key rotation tracking
 
-import { prepare as db, getDb } from '../client.js'
+import { getDb } from '../client.js'
 
 export async function migrate() {
   console.log('Running migration: add last_used to users')
