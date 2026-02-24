@@ -13,6 +13,7 @@ describe('LagoService', () => {
     vi.clearAllMocks()
     // Reset env
     delete process.env.LAGO_API_KEY
+    delete process.env.LAGO_API_URL
     service = new LagoService()
   })
 

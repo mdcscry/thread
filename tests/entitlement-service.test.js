@@ -39,7 +39,7 @@ describe('EntitlementService', () => {
     it('handles duplicate provision gracefully', async () => {
       db.run.mockImplementationOnce(() => { throw new Error('UNIQUE constraint failed') })
       
-      // Should not throw - just handle gracefully
+      // Should handle gracefully - currently throws, update if you want graceful handling
       await expect(service.provisionFree(123)).rejects.toThrow('UNIQUE constraint')
     })
   })

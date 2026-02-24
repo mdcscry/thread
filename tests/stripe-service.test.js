@@ -194,7 +194,7 @@ describe('StripeService', () => {
 
   describe('createCheckoutSession', () => {
     it('returns dev URL when disabled', async () => {
-      const result = await service.createCheckoutSession({
+      const result = await svc.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -210,7 +210,7 @@ describe('StripeService', () => {
       const mockSession = { url: 'https://checkout.stripe.com/c/pay/cs_123' }
       svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await service.createCheckoutSession({
+      const result = await svc.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -230,7 +230,7 @@ describe('StripeService', () => {
       }
       svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await service.createCheckoutSession({
+      const result = await svc.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -260,7 +260,7 @@ describe('StripeService', () => {
       const mockSession = { url: null, expired: true }
       svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await service.createCheckoutSession({
+      const result = await svc.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -274,7 +274,7 @@ describe('StripeService', () => {
 
   describe('createPortalSession', () => {
     it('returns dev URL when disabled', async () => {
-      const result = await service.createPortalSession({
+      const result = await svc.createPortalSession({
         customerId: 'cus_123',
         returnUrl: 'http://localhost:5173/billing',
       })
@@ -288,7 +288,7 @@ describe('StripeService', () => {
       const mockSession = { url: 'https://billing.stripe.com/session/bps_123' }
       svc.stripe.billingPortal.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await service.createPortalSession({
+      const result = await svc.createPortalSession({
         customerId: 'cus_123',
         returnUrl: 'http://localhost:5173/billing',
       })
@@ -392,7 +392,7 @@ describe('StripeService', () => {
       const mockSession = { url: 'https://checkout.stripe.com/c/pay/cs_123' }
       svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await service.createCheckoutSession({
+      const result = await svc.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [],
         successUrl: 'http://localhost:5173/success',
