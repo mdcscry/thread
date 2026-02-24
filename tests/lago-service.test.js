@@ -145,8 +145,8 @@ describe('LagoService', () => {
         json: async () => ({ wrong_key: 'value' })
       })
 
-      const result = await svc.createCustomer({ userId: 456, email: 'test@example.com' })
-      expect(result.lago_customer_id).toBeUndefined()
+      await expect(svc.createCustomer({ userId: 456, email: 'test@example.com' }))
+        .rejects.toThrow('Lago createCustomer: unexpected response shape')
     })
   })
 

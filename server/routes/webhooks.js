@@ -39,7 +39,8 @@ export async function webhookRoutes(fastify) {
             !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
           return reply.status(401).send({ error: 'Invalid signature' });
         }
-      } catch {
+      } catch (err) {
+        fastify.log.warn({ err }, 'Signature verification failed with malformed input');
         return reply.status(401).send({ error: 'Invalid signature' });
       }
     } else {

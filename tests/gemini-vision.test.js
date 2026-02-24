@@ -7,39 +7,21 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import assert from 'node:assert/strict'
+// assert shim — maps node:assert style to vitest expect
+const assert = {
+  ok: (val, msg) => expect(val, msg).toBeTruthy(),
+  equal: (a, b, msg) => expect(a, msg).toBe(b),
+  deepEqual: (a, b, msg) => expect(a, msg).toEqual(b),
+  strictEqual: (a, b, msg) => expect(a, msg).toBe(b),
+  throws: (fn, msg) => expect(fn, msg).toThrow(),
+  rejects: async (fn, pattern) => {
+    await expect(fn()).rejects.toThrow(pattern)
+  },
+}
 import { GeminiVisionService } from '../server/services/GeminiVisionService.js'
-
-let passed = 0
-let failed = 0
-
-function test(name, fn) {
-  try {
-    fn()
-    passed++
-    console.log(`  ✅ ${name}`)
-  } catch (e) {
-    failed++
-    console.log(`  ❌ ${name}`)
-    console.log(`     ${e.message}`)
-  }
-}
-
-async function asyncTest(name, fn) {
-  try {
-    await fn()
-    passed++
-    console.log(`  ✅ ${name}`)
-  } catch (e) {
-    failed++
-    console.log(`  ❌ ${name}`)
-    console.log(`     ${e.message}`)
-  }
-}
 
 // ── Availability ────────────────────────────────────────────────────────────
 
-console.log('\nisAvailable:')
 
 test('returns false when no API key set', () => {
   const saved = process.env.GEMINI_API_KEY
@@ -236,7 +218,7 @@ test('occasion defaults to [casual]', () => {
 
 console.log('\nError handling:')
 
-await asyncTest('throws when no API key set', async () => {
+test('throws when no API key set', async () => {
   delete process.env.GEMINI_API_KEY
   const svc = new GeminiVisionService()
   await assert.rejects(
@@ -259,7 +241,7 @@ if (runLive) {
   if (!svc.isAvailable()) {
     console.log('  ⏭️  Skipped — no GEMINI_API_KEY in .env')
   } else {
-    await asyncTest('analyzes t-shirt image', async () => {
+    test('analyzes t-shirt image', async () => {
       const result = await svc.analyzeImageStructured('./data/test-images/blueowl/male/01-tshirt.jpg')
       assert.ok(result.structured)
       assert.equal(result.structured.category, 'T-Shirt')
@@ -268,14 +250,14 @@ if (runLive) {
       assert.ok(result.model.includes('gemini'))
     })
 
-    await asyncTest('analyzes boots image', async () => {
+    test('analyzes boots image', async () => {
       const result = await svc.analyzeImageStructured('./data/test-images/blueowl/male/09-boots.jpg')
       assert.ok(result.structured)
       assert.equal(result.structured.category, 'Boots')
       assert.ok(result.structured.material)
     })
 
-    await asyncTest('all required fields present', async () => {
+    test('all required fields present', async () => {
       const result = await svc.analyzeImageStructured('./data/test-images/blueowl/male/06-jeans.jpg')
       const s = result.structured
       const required = ['name', 'category', 'primary_color', 'pattern', 'material', 'fit', 'formality', 'season', 'confidence']
@@ -288,13 +270,4 @@ if (runLive) {
   console.log('\n  ℹ️  Run with --live flag for API integration tests')
 }
 
-// ── Summary ─────────────────────────────────────────────────────────────────
-
-console.log(`\n${'─'.repeat(50)}`)
-console.log(`Results: ${passed} passed, ${failed} failed, ${passed + failed} total`)
-if (failed > 0) {
-  console.log('❌ SOME TESTS FAILED')
-  process.exit(1)
-} else {
-  console.log('✅ ALL TESTS PASSED')
-}
+// Tests managed by vitest

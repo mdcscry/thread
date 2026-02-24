@@ -6,7 +6,14 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import assert from 'node:assert/strict'
+// assert shim — maps node:assert style to vitest expect
+const assert = {
+  ok: (val, msg) => expect(val, msg).toBeTruthy(),
+  equal: (a, b, msg) => expect(a, msg).toBe(b),
+  deepEqual: (a, b, msg) => expect(a, msg).toEqual(b),
+  strictEqual: (a, b, msg) => expect(a, msg).toBe(b),
+  throws: (fn, msg) => expect(fn, msg).toThrow(),
+}
 import {
   FEATURE_DIM,
   computeItemFeatures,
@@ -25,21 +32,6 @@ import {
   MATERIALS,
   OCCASIONS,
 } from '../server/services/FeatureEngine.js'
-
-let passed = 0
-let failed = 0
-
-function test(name, fn) {
-  try {
-    fn()
-    passed++
-    console.log(`  ✅ ${name}`)
-  } catch (e) {
-    failed++
-    console.log(`  ❌ ${name}`)
-    console.log(`     ${e.message}`)
-  }
-}
 
 function approx(a, b, tolerance = 0.01) {
   assert.ok(Math.abs(a - b) < tolerance, `Expected ~${b}, got ${a}`)
@@ -344,11 +336,4 @@ test('handles null context and peers', () => {
 
 // ── Summary ─────────────────────────────────────────────────────────────────
 
-console.log(`\n${'─'.repeat(50)}`)
-console.log(`Results: ${passed} passed, ${failed} failed, ${passed + failed} total`)
-if (failed > 0) {
-  console.log('❌ SOME TESTS FAILED')
-  process.exit(1)
-} else {
-  console.log('✅ ALL TESTS PASSED')
-}
+// Tests managed by vitest
