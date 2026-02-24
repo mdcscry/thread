@@ -5,7 +5,6 @@
 ## 🚧 In Progress
 
 - **VPS deployment** — awaiting DatabaseMart provisioning (order #5148848963)
-- ✅ **Profile UI expansion** — gender_identity, style_presentation, build, fit prefs, use cases
 
 ## 📋 Backlog
 
