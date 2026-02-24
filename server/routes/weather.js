@@ -13,16 +13,14 @@ export default async function weatherRoutes(fastify, opts) {
   fastify.get('/weather', { preHandler: [optionalAuth] }, async (request, reply) => {
     const { location, lat, lon } = request.query
 
+    // Default to Boulder, CO if no location provided
+    const queryLocation = location || 'Boulder, CO'
+
     if (lat && lon) {
       return weatherService.getCurrentWeather(parseFloat(lat), parseFloat(lon))
     }
 
-    if (location) {
-      return weatherService.getWeatherForLocation(location)
-    }
-
-    // Return 400 if no location params provided
-    return reply.code(400).send({ error: 'Location parameter required (location, or lat+lon)' })
+    return weatherService.getWeatherForLocation(queryLocation)
   })
 
   // Get forecast

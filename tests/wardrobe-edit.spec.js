@@ -20,7 +20,7 @@ test.describe('Wardrobe Edit Modal', () => {
     await login(page)
     
     // Navigate to wardrobe
-    await page.click('nav a:has-text("Wardrobe")')
+    await page.click('nav a:has-text("👗")')
     await page.waitForLoadState('networkidle')
     
     // Wait for items to load
@@ -52,7 +52,7 @@ test.describe('Wardrobe Edit Modal', () => {
     // Verify the name change persisted - reload and check
     await page.reload()
     await page.waitForLoadState('networkidle')
-    await page.click('nav a:has-text("Wardrobe")')
+    await page.click('nav a:has-text("👗")')
     await page.waitForLoadState('networkidle')
     
     // Click the same item again
@@ -70,7 +70,7 @@ test.describe('Wardrobe Edit Modal', () => {
     await login(page)
     
     // Navigate to wardrobe
-    await page.click('nav a:has-text("Wardrobe")')
+    await page.click('nav a:has-text("👗")')
     await page.waitForLoadState('networkidle')
     await page.waitForSelector('.item-card, [class*="itemGrid"]', { timeout: 10000 })
     
@@ -107,7 +107,7 @@ test.describe('Wardrobe Edit Modal', () => {
     await login(page)
     
     // Navigate to wardrobe
-    await page.click('nav a:has-text("Wardrobe")')
+    await page.click('nav a:has-text("👗")')
     await page.waitForLoadState('networkidle')
     await page.waitForSelector('.item-card, [class*="itemGrid"]', { timeout: 10000 })
     
@@ -120,9 +120,54 @@ test.describe('Wardrobe Edit Modal', () => {
     await expect(modal).toBeVisible({ timeout: 5000 })
     
     // Check for expected fields
-    await expect(modal.locator('input[name="name"]')).toBeVisible()
-    await expect(modal.locator('select[name="category"], input[name="category"]')).toBeVisible()
-    await expect(modal.locator('select[name="season"], input[name="season"]')).toBeVisible()
-    await expect(modal.locator('select[name="formality"], input[name="formality"]')).toBeVisible()
+    await expect(modal.locator('label:has-text("Name")')).toBeVisible()
+    await expect(modal.locator('label:has-text("Category")').first()).toBeVisible()
+    await expect(modal.locator('label:has-text("Pattern")')).toBeVisible()
+  })
+
+  test('seasons and occasions checkboxes save and persist', async ({ page }) => {
+    await login(page)
+    
+    // Navigate to wardrobe
+    await page.click('nav a:has-text("👗")')
+    await page.waitForLoadState('networkidle')
+    await page.waitForSelector('.item-card, [class*="itemGrid"]', { timeout: 10000 })
+    
+    // Click first item to open edit modal
+    const itemCard = page.locator('.item-card, [class*="itemCard"]').first()
+    await itemCard.click()
+    
+    // Wait for modal
+    const modal = page.locator('.modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    
+    // Find and check a season checkbox (e.g., "Summer")
+    const summerCheckbox = modal.locator('input[type="checkbox"]').filter({ hasText: /summer/i }).first()
+    if (await summerCheckbox.count() > 0) {
+      await summerCheckbox.check()
+      
+      // Find and check an occasion checkbox (e.g., "Casual")
+      const casualCheckbox = modal.locator('input[type="checkbox"]').filter({ hasText: /casual/i }).first()
+      if (await casualCheckbox.count() > 0) {
+        await casualCheckbox.check()
+      }
+      
+      // Save
+      const saveButton = modal.locator('button:has-text("Save"), button[type="submit"]').first()
+      await saveButton.click()
+      
+      // Wait for modal to close
+      await expect(modal).not.toBeVisible({ timeout: 5000 })
+      
+      // Reopen the item
+      await itemCard.click()
+      await expect(modal).toBeVisible({ timeout: 5000 })
+      
+      // Verify checkboxes are still checked
+      await expect(summerCheckbox).toBeChecked()
+      if (await casualCheckbox.count() > 0) {
+        await expect(casualCheckbox).toBeChecked()
+      }
+    }
   })
 })

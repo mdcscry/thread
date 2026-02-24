@@ -82,7 +82,7 @@ export function runExec(sql, params = []) {
   let finalSql = sql
   if (params.length > 0) {
     for (const p of params) {
-      const val = p === null ? 'NULL' : typeof p === 'string' ? `'${p.replace(/'/g, "''")}'` : p
+      const val = p === null || p === undefined ? 'NULL' : typeof p === 'string' ? `'${p.replace(/'/g, "''")}'` : p
       finalSql = finalSql.replace(/\?/, val)
     }
   }
@@ -203,6 +203,7 @@ export async function initializeDatabase() {
       laundry_since DATETIME,
       ai_raw_description TEXT,
       ai_model_used TEXT,
+      ai_status TEXT DEFAULT 'pending', -- pending, processing, complete, failed
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );

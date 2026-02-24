@@ -1,28 +1,10 @@
 import { authenticateApiKey, optionalAuth } from '../middleware/auth.js'
 import { generateQRCodeUrl } from '../services/QRService.js'
-import { loginUser } from '../services/AuthService.js'
 import db from '../db/client.js'
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
 
 export default async function settingsRoutes(fastify, opts) {
-  // Login with email/password (for phone)
-  fastify.post('/auth/login', async (request, reply) => {
-    const { email, password } = request.body
-    
-    if (!email || !password) {
-      return reply.code(400).send({ error: 'Email and password required' })
-    }
-    
-    const result = await loginUser(email, password)
-    
-    if (result.error) {
-      return reply.code(401).send(result)
-    }
-    
-    return result
-  })
-
   // Get QR code for phone connection
   fastify.get('/settings/qr', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const port = parseInt(process.env.PORT || '3000')

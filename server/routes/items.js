@@ -7,7 +7,7 @@ export default async function itemsRoutes(fastify, opts) {
   // List all items (with primary image from item_images)
   fastify.get('/items', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
-    const { category, flagged, loved, search, inLaundry, stored } = request.query
+    const { category, flagged, loved, search, inLaundry, stored, offset, limit } = request.query
 
     let query = db.prepare('SELECT * FROM clothing_items WHERE user_id = ? AND is_active = 1')
     let items = query.all(userId)
@@ -39,6 +39,14 @@ export default async function itemsRoutes(fastify, opts) {
       )
     }
 
+    // Apply pagination
+    if (offset) {
+      items = items.slice(parseInt(offset))
+    }
+    if (limit) {
+      items = items.slice(0, parseInt(limit))
+    }
+
     // Attach primary image to each item and safely parse JSON fields
     return items.map(item => {
       const primaryImage = db.prepare(`
@@ -46,15 +54,23 @@ export default async function itemsRoutes(fastify, opts) {
         WHERE item_id = ? AND is_primary = 1
       `).get(item.id)
 
-      // Safely parse colors JSON
+      // Safely parse JSON fields
       let parsedColors = []
-      if (item.colors) {
-        try {
-          parsedColors = JSON.parse(item.colors)
-        } catch (e) {
-          parsedColors = []
-        }
-      }
+      let parsedOccasion = []
+      let parsedSeason = []
+      let parsedStyleTags = []
+      try {
+        parsedColors = item.colors ? JSON.parse(item.colors) : []
+      } catch (e) { parsedColors = [] }
+      try {
+        parsedOccasion = item.occasion ? JSON.parse(item.occasion) : []
+      } catch (e) { parsedOccasion = [] }
+      try {
+        parsedSeason = item.season ? JSON.parse(item.season) : []
+      } catch (e) { parsedSeason = [] }
+      try {
+        parsedStyleTags = item.style_tags ? JSON.parse(item.style_tags) : []
+      } catch (e) { parsedStyleTags = [] }
 
       return {
         ...item,
@@ -62,6 +78,9 @@ export default async function itemsRoutes(fastify, opts) {
         category: item.category || null,
         primary_color: item.primary_color || null,
         colors: parsedColors,
+        occasion: parsedOccasion,
+        season: parsedSeason,
+        style_tags: parsedStyleTags,
         pattern: item.pattern || null,
         material: item.material || null,
         subcategory: item.subcategory || null,
@@ -159,7 +178,9 @@ export default async function itemsRoutes(fastify, opts) {
   })
 
   // Toggle loved
-  fastify.post('/items/:id/love', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+  fastify.post('/items/:id/love', { 
+    preHandler: [authenticateApiKey]
+  }, async (request, reply) => {
     const { userId } = request.user
     const { id } = request.params
 

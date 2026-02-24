@@ -78,6 +78,10 @@ export class IngestionService {
     switch (sourceType) {
       case 'google_drive':
         return this.discoverGoogleDrive(sourceUrl)
+      case 'url':
+        return [sourceUrl] // Direct URL - just return it as a single-item array
+      case 'webpage':
+        return this.parseUrlList(sourceUrl)
       case 'url_list':
         return this.parseUrlList(sourceUrl)
       default:
@@ -248,53 +252,20 @@ export class IngestionService {
     await sharp(inputBuffer).resize(800, 800, { fit: 'inside' }).jpeg({ quality: 85 }).toFile(medium.diskPath)
     await sharp(inputBuffer).resize(300, 300, { fit: 'cover', position: 'top' }).jpeg({ quality: 80 }).toFile(thumb.diskPath)
 
-    // Analyze with Ollama (with timeout)
-    let analysis = null
-    let aiFlagged = 0
-    let aiConfidence = 0
-
-    try {
-      // Add timeout - if Ollama takes > 60 seconds, skip AI analysis
-      const analysisPromise = this.ollama.analyzeImageStructured(medium.diskPath)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('AI timeout')), 120000)
-      )
-      
-      analysis = await Promise.race([analysisPromise, timeoutPromise])
-      console.log('AI analysis result:', analysis ? 'got result' : 'null')
-      
-      if (analysis?.structured) {
-        const s = analysis.structured
-        console.log('AI structured data:', JSON.stringify(s).slice(0, 200))
-        aiConfidence = s.confidence || 0
-        const uncertainCount = (s.uncertain_fields || []).length
-        if (aiConfidence < 0.7 || uncertainCount > 2) {
-          aiFlagged = 1
-        }
-      } else {
-        console.log('No structured data in analysis result')
-      }
-    } catch (error) {
-      console.error('AI analysis failed or timed out:', error.message)
-      aiFlagged = 1  // Flag for manual review
-    }
-
-    const s = analysis?.structured || {}
+    // FAST: Insert immediately with pending status, queue for async AI analysis
     const { lastInsertRowid: itemId } = runExec(`
       INSERT INTO clothing_items (
         user_id, name, category, subcategory, primary_color, secondary_color, weft_color, colors,
         pattern, material, texture, silhouette, fit, length, style_tags, occasion,
         formality, season, weight, temp_min_f, temp_max_f, ai_confidence, ai_flagged,
-        ai_raw_description, ai_model_used
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ai_raw_description, ai_model_used, ai_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       userId, filename.replace(/\.[^.]+$/, ''),
-      s.category || null, s.subcategory || null, s.primary_color || null, s.secondary_color || null, s.weft_color || null,
-      JSON.stringify(s.colors || []),
-      s.pattern || null, s.material || null, s.texture || null, s.silhouette || null, s.fit || null, s.length || null,
-      JSON.stringify(s.style_tags || []), JSON.stringify(s.occasion || []), s.formality || 5,
-      JSON.stringify(s.season || []), s.weight || null, s.temp_min_f || 45, s.temp_max_f || 85, aiConfidence, aiFlagged,
-      analysis?.rawDescription || null, analysis?.model || null
+      null, null, null, null, null, '[]',
+      null, null, null, null, null, null, '[]', '[]', 5,
+      '[]', null, 45, 85, 0, 0,
+      null, null, 'pending'
     ])
 
     if (!itemId) throw new Error('Failed to get itemId after insert')
@@ -304,27 +275,96 @@ export class IngestionService {
       VALUES (?, ?, ?, ?, 'unknown', 1)
     `, [itemId, full.dbPath, medium.dbPath, thumb.dbPath])
 
-    // Create refinement prompts for flagged items
-    if (aiFlagged && analysis?.structured?.uncertain_fields?.length > 0) {
-      for (const field of analysis.structured.uncertain_fields) {
-        const questions = {
-          material: 'What material is this item?',
-          weight: 'How heavy/warm is this item?',
-          season: 'What seasons would you wear this in?',
-          category: 'What type of clothing is this?',
-          formality: 'On a scale 1-10, how formal is this item?'
-        }
-        
-        if (questions[field]) {
-          runExec(`
-            INSERT INTO refinement_prompts (user_id, item_id, question, field_name)
-            VALUES (?, ?, ?, ?)
-          `, [userId, itemId, questions[field], field])
-        }
+    // Queue for background AI analysis (non-blocking)
+    this.queueAnalysis(itemId, medium.diskPath)
+
+    return itemId
+  }
+
+  // Background queue for AI analysis
+  queue = []
+  queueProcessing = false
+
+  queueAnalysis(itemId, imagePath) {
+    this.queue.push({ itemId, imagePath })
+    this.processQueue()
+  }
+
+  async processQueue() {
+    if (this.queueProcessing || this.queue.length === 0) return
+    this.queueProcessing = true
+    
+    while (this.queue.length > 0) {
+      const job = this.queue.shift()
+      try {
+        await this.analyzeQueuedItem(job.itemId, job.imagePath)
+      } catch (err) {
+        console.error('Queue analysis failed for item', job.itemId, err.message)
+      }
+    }
+    
+    this.queueProcessing = false
+  }
+
+  async analyzeQueuedItem(itemId, imagePath) {
+    // Update status to processing
+    runExec(`UPDATE clothing_items SET ai_status = 'processing' WHERE id = ?`, [itemId])
+    
+    let analysis = null
+    let aiFlagged = 0
+    let aiConfidence = 0
+
+    try {
+      // Try MiniMax first (fast)
+      analysis = await this.ollama.analyzeImageWithMiniMax(imagePath, 'Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit, silhouette, style tags.')
+      
+      // MiniMax returns text - extract structured data
+      const rawDescription = typeof analysis === 'string' ? analysis : 'No description'
+      const lowerDesc = rawDescription.toLowerCase()
+      
+      const s = {
+        category: this.ollama.extractCategory(lowerDesc),
+        primary_color: this.ollama.extractColor(lowerDesc),
+        material: this.ollama.extractMaterial(lowerDesc),
+        fit: this.ollama.extractFit(lowerDesc),
+        pattern: this.ollama.extractPattern(lowerDesc),
+      }
+      
+      analysis = {
+        rawDescription,
+        structured: s,
+        model: 'minimax-mcp'
+      }
+    } catch (error) {
+      console.log('MiniMax failed, queuing for Ollama later:', error.message)
+      // Keep as 'processing' - will retry with Ollama in next cycle
+    }
+
+    // If no analysis, try Ollama (slower)
+    if (!analysis?.structured) {
+      try {
+        console.log('Trying Ollama for item', itemId)
+        analysis = await this.ollama.analyzeWithOllamaDirect(imagePath)
+      } catch (err) {
+        console.error('Ollama also failed for item', itemId, err.message)
       }
     }
 
-    return itemId
+    // Update item with results
+    const s = analysis?.structured || {}
+    const model = analysis?.model || null
+    
+    runExec(`
+      UPDATE clothing_items SET 
+        category = ?, subcategory = ?, primary_color = ?, secondary_color = ?, colors = ?,
+        pattern = ?, material = ?, ai_confidence = ?, ai_flagged = ?,
+        ai_raw_description = ?, ai_model_used = ?, ai_status = ?
+      WHERE id = ?
+    `, [
+      s.category || null, s.subcategory || null, s.primary_color || null, s.secondary_color || null, JSON.stringify(s.colors || []),
+      s.pattern || null, s.material || null, s.confidence || 0, aiFlagged,
+      analysis?.rawDescription || null, model, analysis ? 'complete' : 'failed', itemId
+    ])
   }
 
   getJobStatus(jobId) {

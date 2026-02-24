@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Wardrobe from './pages/Wardrobe'
 import OutfitStudio from './pages/OutfitStudio'
+import OutfitTrainer from './pages/OutfitTrainer'
 import Ingestion from './pages/Ingestion'
 import Settings from './pages/Settings'
 import Profiles from './pages/Profiles'
@@ -44,14 +45,16 @@ export default function App() {
   // Simple routing
   const renderPage = () => {
     if (!apiKey) {
-      return <Setup onSave={handleApiKeyChange} />
+      return <Setup onSave={handleApiKeyChange} onLoginSuccess={(user) => setCurrentUser(user)} />
     }
 
     switch (page) {
       case 'wardrobe':
-        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} />
+        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} gender={currentUser?.gender} />
       case 'outfits':
         return <OutfitStudio apiKey={apiKey} userId={currentUser?.id} />
+      case 'trainer':
+        return <OutfitTrainer apiKey={apiKey} currentUser={currentUser} />
       case 'ingestion':
         return <Ingestion apiKey={apiKey} />
       case 'camera':
@@ -63,7 +66,7 @@ export default function App() {
       case 'settings':
         return <Settings apiKey={apiKey} onApiKeyChange={handleApiKeyChange} />
       default:
-        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} />
+        return <Wardrobe apiKey={apiKey} userId={currentUser?.id} gender={currentUser?.gender} />
     }
   }
 
@@ -82,6 +85,7 @@ export default function App() {
           <nav className="nav">
             <a href="#" className={page === 'wardrobe' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('wardrobe') }}>👗</a>
             <a href="#" className={page === 'outfits' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('outfits') }}>✨</a>
+            <a href="#" className={page === 'trainer' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('trainer') }}>🧠</a>
             <a href="#" className={page === 'camera' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('camera') }}>📷</a>
             <a href="#" className={page === 'vacation' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('vacation') }}>✈️</a>
             <a href="#" className={page === 'profiles' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setPage('profiles') }}>👥</a>
@@ -97,12 +101,27 @@ export default function App() {
   )
 }
 
-function Setup({ onSave }) {
+function Setup({ onSave, onLoginSuccess }) {
   const [email, setEmail] = useState('you@localhost')
   const [password, setPassword] = useState('thread123')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [mode, setMode] = useState('login') // 'login' or 'apikey'
+  const [mode, setMode] = useState('login') // 'login', 'signup', or 'apikey'
+  const [firstName, setFirstName] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+
+  // Load Turnstile script
+  useEffect(() => {
+    if (!document.getElementById('turnstile-script')) {
+      const script = document.createElement('script')
+      script.id = 'turnstile-script'
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      script.async = true
+      script.defer = true
+      document.body.appendChild(script)
+    }
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -122,6 +141,9 @@ function Setup({ onSave }) {
       
       if (res.ok && data.apiKey) {
         onSave(data.apiKey)
+        if (onLoginSuccess) {
+          onLoginSuccess({ id: data.userId, name: data.name, email: data.email })
+        }
       } else {
         setError(data.error || 'Login failed')
       }
@@ -132,6 +154,69 @@ function Setup({ onSave }) {
     setLoading(false)
   }
 
+  const handleSignup = async (e) => {
+    e.preventDefault()
+    if (!email || !password || !firstName) {
+      setError('All fields required')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    if (!turnstileToken) {
+      setError('Please complete the bot check')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          firstName,
+          'cf-turnstile-response': turnstileToken
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (res.ok && data.apiKey) {
+        onSave(data.apiKey)
+        if (onLoginSuccess) {
+          onLoginSuccess({ id: data.userId, name: data.firstName || firstName, email })
+        }
+      } else {
+        setError(data.error || 'Registration failed')
+      }
+    } catch (err) {
+      setError('Could not connect to server')
+    }
+    
+    setLoading(false)
+  }
+
+  // Render Turnstile widget
+  const renderTurnstile = () => {
+    if (window.turnstile) {
+      window.turnstile.render('#turnstile-container', {
+        sitekey: '0x4AAAAAAChHZqWwCEL4S1P1s5jCGDEZuio',
+        callback: (token) => setTurnstileToken(token),
+        'expired-callback': () => setTurnstileToken('')
+      })
+    }
+    return <div id="turnstile-container" style={{ margin: '1rem 0' }} />
+  }
+
   return (
     <div style={{ maxWidth: 400, margin: '4rem auto', textAlign: 'center' }}>
       <h1 style={{ marginBottom: '0.5rem' }}>THREAD</h1>
@@ -140,7 +225,7 @@ function Setup({ onSave }) {
       </p>
       
       <div className="card">
-        {/* Toggle between login and API key */}
+        {/* Toggle between login, signup, and API key */}
         <div style={{ display: 'flex', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)' }}>
           <button 
             onClick={() => setMode('login')}
@@ -154,7 +239,21 @@ function Setup({ onSave }) {
               cursor: 'pointer'
             }}
           >
-            Email
+            Login
+          </button>
+          <button 
+            onClick={() => setMode('signup')}
+            style={{ 
+              flex: 1, 
+              padding: '0.5rem', 
+              background: 'none', 
+              border: 'none',
+              borderBottom: mode === 'signup' ? '2px solid var(--color-accent)' : 'none',
+              color: mode === 'signup' ? 'var(--color-text)' : 'var(--color-text-muted)',
+              cursor: 'pointer'
+            }}
+          >
+            Sign Up
           </button>
           <button 
             onClick={() => setMode('apikey')}
@@ -199,6 +298,55 @@ function Setup({ onSave }) {
             
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+        ) : mode === 'signup' ? (
+          <form onSubmit={handleSignup}>
+            <div className="form-group">
+              <label>First Name</label>
+              <input 
+                type="text" 
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Your first name"
+              />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div className="form-group">
+              <label>Confirm Password</label>
+              <input 
+                type="password" 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+              />
+            </div>
+            
+            {renderTurnstile()}
+            
+            {error && (
+              <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</p>
+            )}
+            
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Creating account...' : 'Sign Up'}
             </button>
           </form>
         ) : (

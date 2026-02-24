@@ -241,4 +241,34 @@ test.describe('Upload — Camera Page UI', () => {
     await expect(page.locator('nav a.active:has-text("👗"), h1, h2').first()).toBeVisible()
   })
 
+  // Regression test: upload should work even if AI analysis fails (undefined model)
+  test('upload works when AI analysis fails gracefully', async ({ request }) => {
+    // Upload succeeds as long as the DB insert works
+    const b64 = 'data:image/jpeg;base64,' + TEST_JPEG.toString('base64')
+    const res = await request.post(`${BASE}/api/v1/ingestion/upload-photo-json`, {
+      headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
+      data: { image: b64, filename: 'regression_test.jpg' }
+    })
+    
+    // Should succeed even if AI analysis fails
+    expect(res.ok()).toBeTruthy()
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(typeof body.itemId).toBe('number')
+    
+    // Verify item was created with ai_model_used = null (not 'undefined' string)
+    const itemsRes = await request.get(`${BASE}/api/v1/items/${body.itemId}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    })
+    const item = await itemsRes.json()
+    
+    // ai_model_used should be null/undefined, not the string 'undefined'
+    expect(['undefined', 'null']).not.toContain(String(item.ai_model_used))
+    
+    // Clean up
+    await request.delete(`${BASE}/api/v1/items/${body.itemId}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    })
+  })
+
 })

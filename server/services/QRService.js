@@ -29,9 +29,10 @@ export function getLocalIP() {
 }
 
 // Generate QR code as data URL
-export async function generateQRCodeUrl(port = 3000) {
+export async function generateQRCodeUrl(port = 3000, useHttps = true) {
   const ip = getLocalIP()
-  const url = `http://${ip}:${port}`
+  const protocol = useHttps ? 'https' : 'http'
+  const url = `${protocol}://${ip}:${port}`
   
   return {
     url,
@@ -47,9 +48,10 @@ export async function generateQRCodeUrl(port = 3000) {
 }
 
 // Generate QR code as SVG string
-export async function generateQRSvg(port = 3000) {
+export async function generateQRSvg(port = 3000, useHttps = true) {
   const ip = getLocalIP()
-  const url = `http://${ip}:${port}`
+  const protocol = useHttps ? 'https' : 'http'
+  const url = `${protocol}://${ip}:${port}`
   
   return {
     url,
