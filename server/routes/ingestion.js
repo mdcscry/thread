@@ -1,5 +1,6 @@
 import { authenticateApiKey } from '../middleware/auth.js'
 import IngestionService from '../services/IngestionService.js'
+import { RateLimitService } from '../services/RateLimitService.js'
 
 let ingestionService = null
 
@@ -12,6 +13,17 @@ export default async function ingestionRoutes(fastify, opts) {
   fastify.post('/ingestion/start', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
     const { sourceUrl, sourceType = 'google_drive', model } = request.body
+    
+    // Check rate limit for Gemini vision
+    const rateCheck = await RateLimitService.checkLimit(userId, 'gemini_vision')
+    if (!rateCheck.allowed) {
+      return reply.code(429).send({
+        error: 'Rate limit exceeded',
+        limit: rateCheck.limit,
+        remaining: 0,
+        plan: rateCheck.plan
+      })
+    }
 
     if (!sourceUrl) {
       return reply.code(400).send({ error: 'sourceUrl is required' })

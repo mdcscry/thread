@@ -17,7 +17,7 @@
 - ~~**Password Reset** — /auth/forgot-password, /auth/reset-password~~
 - ~~**Resend transactional email** — welcome, password reset, billing~~
 - ~~**Email Verification** — verify email on signup~~
-- **AI rate limiting** — per-user, per-plan limits on Gemini calls
+- ~~**AI rate limiting** — per-user, per-plan limits on Gemini calls~~
 
 ## 📋 Backlog
 

@@ -3,6 +3,7 @@ import { authenticateApiKey } from '../middleware/auth.js'
 import OutfitEngine from '../services/OutfitEngine.js'
 import WeatherService from '../services/WeatherService.js'
 import { recordFeedback, markAsWorn } from '../services/PreferenceService.js'
+import { RateLimitService } from '../services/RateLimitService.js'
 
 let outfitEngine = null
 let weatherService = null
@@ -18,6 +19,18 @@ export default async function outfitsRoutes(fastify, opts) {
   // Generate outfits
   fastify.post('/outfits/generate', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
+    
+    // Check rate limit
+    const rateCheck = await RateLimitService.checkLimit(userId, 'outfit_generate')
+    if (!rateCheck.allowed) {
+      return reply.code(429).send({
+        error: 'Rate limit exceeded',
+        limit: rateCheck.limit,
+        remaining: 0,
+        plan: rateCheck.plan
+      })
+    }
+    
     const context = request.body
 
     const result = await outfitEngine.generateOutfits(userId, {
@@ -63,7 +76,11 @@ export default async function outfitsRoutes(fastify, opts) {
     return {
       outfits: savedOutfits,
       context: result.context,
-      totalGenerated: result.totalGenerated
+      totalGenerated: result.totalGenerated,
+      rateLimit: {
+        remaining: rateCheck.remaining - 1,
+        limit: rateCheck.limit
+      }
     }
   })
 
