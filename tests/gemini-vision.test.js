@@ -6,6 +6,7 @@
  * Live API test (optional): set GEMINI_API_KEY env var + pass --live flag.
  */
 
+import { describe, test, expect } from 'vitest'
 import assert from 'node:assert/strict'
 import { GeminiVisionService } from '../server/services/GeminiVisionService.js'
 

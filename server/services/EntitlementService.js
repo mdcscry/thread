@@ -24,7 +24,8 @@ export class EntitlementService {
   // Called by webhook handler on subscription events
   async updateFromWebhook({ userId, plan, status, lagoCustomerId, lagoSubscriptionId,
                             stripeCustomerId, currentPeriodEnd, gracePeriodEnd }) {
-    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+    const validPlan = PLAN_LIMITS[plan] ? plan : 'free';
+    const limits = PLAN_LIMITS[validPlan];
     this.db.run(`
       UPDATE entitlements SET
         plan = ?, status = ?,
@@ -34,7 +35,7 @@ export class EntitlementService {
         current_period_end = ?, grace_period_end = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
-    `, [plan, status, lagoCustomerId, lagoSubscriptionId, stripeCustomerId,
+    `, [validPlan, status, lagoCustomerId, lagoSubscriptionId, stripeCustomerId,
         limits.items_limit, limits.outfits_per_day, limits.ai_tier,
         currentPeriodEnd, gracePeriodEnd, userId]);
   }
@@ -61,9 +62,10 @@ export class EntitlementService {
 
     const now = new Date();
     const gracePeriodEnd = entitlement.grace_period_end ? new Date(entitlement.grace_period_end) : null;
-    const hasAccess = entitlement.status === 'active' ||
+    const hasAccess = !!(entitlement.status === 'active' ||
                       entitlement.status === 'trialing' ||
-                      (entitlement.status === 'past_due' && gracePeriodEnd && now < gracePeriodEnd);
+                      entitlement.status === 'paused' ||
+                      (entitlement.status === 'past_due' && gracePeriodEnd && now < gracePeriodEnd));
 
     return { ...entitlement, hasAccess };
   }

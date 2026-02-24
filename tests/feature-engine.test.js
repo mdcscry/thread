@@ -5,6 +5,7 @@
  * Zero dependencies — uses Node's built-in assert.
  */
 
+import { describe, test, expect } from 'vitest'
 import assert from 'node:assert/strict'
 import {
   FEATURE_DIM,

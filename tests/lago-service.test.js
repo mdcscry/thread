@@ -243,7 +243,7 @@ describe('LagoService', () => {
       process.env.LAGO_API_KEY = 'lago_test_key'
       const svc = new LagoService()
 
-      global.fetch.mockResolvedValueOnce({ ok: false, status: 500 })
+      global.fetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => '' })
 
       await expect(svc.cancelSubscription({ lagoSubscriptionId: 'sub_789' }))
         .rejects.toThrow('Lago cancelSubscription failed: 500')

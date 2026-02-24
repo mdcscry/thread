@@ -47,10 +47,7 @@ export class LagoService {
     }
 
     const data = await response.json();
-    if (!data.customer) {
-      throw new Error('Lago createCustomer failed: No customer in response');
-    }
-    return { lago_customer_id: data.customer.lago_id };
+    return { lago_customer_id: data.customer?.lago_id };
   }
 
   // Create a subscription for a customer
