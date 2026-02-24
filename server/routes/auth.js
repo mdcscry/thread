@@ -84,11 +84,18 @@ export default async function authRoutes(fastify, options) {
     // Generate API key
     const apiKey = 'thread_sk_' + crypto.randomBytes(20).toString('hex')
     
+    // Generate email verification token
+    const verifyToken = crypto.randomBytes(32).toString('hex')
+    
     // Insert user
     const result = db(`
-      INSERT INTO users (email, password, name, api_key, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
-    `).run(email.toLowerCase(), passwordHash, firstName, apiKey)
+      INSERT INTO users (email, password, name, api_key, created_at, email_verify_token)
+      VALUES (?, ?, ?, ?, datetime('now'), ?)
+    `).run(email.toLowerCase(), passwordHash, firstName, apiKey, verifyToken)
+    
+    // Send verification email
+    const verifyUrl = `${process.env.APP_URL || 'http://localhost:5173'}/verify-email?token=${verifyToken}`
+    await EmailService.sendVerification({ to: email, verifyUrl })
     
     return reply.code(201).send({
       userId: result.lastInsertRowid,
@@ -221,5 +228,30 @@ export default async function authRoutes(fastify, options) {
     db('UPDATE password_reset_tokens SET used = 1 WHERE token = ?').run(token)
     
     return reply.send({ reset: true })
+  })
+
+  // POST /auth/verify-email
+  fastify.post('/auth/verify-email', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['token'],
+        properties: {
+          token: { type: 'string', minLength: 64, maxLength: 64 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { token } = request.body
+    
+    const user = db('SELECT id FROM users WHERE email_verify_token = ?').get(token)
+    
+    if (!user) {
+      return reply.status(400).send({ error: 'Invalid verification token.' })
+    }
+    
+    db('UPDATE users SET email_verified = 1, email_verify_token = NULL WHERE id = ?').run(user.id)
+    
+    return reply.send({ verified: true })
   })
 }

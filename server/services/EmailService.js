@@ -35,6 +35,21 @@ function passwordResetTemplate({ resetUrl }) {
   `
 }
 
+function verifyEmailTemplate({ verifyUrl }) {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h1 style="color: #1a1a1a;">Verify Your Email</h1>
+      <p style="color: #4a4a4a; font-size: 16px;">Thanks for joining THREAD!</p>
+      <p style="color: #4a4a4a; font-size: 16px;">
+        <a href="${verifyUrl}" style="display: inline-block; background: #1a1a1a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+          Verify Email
+        </a>
+      </p>
+      <p style="color: #888; font-size: 14px;">If you didn't create a THREAD account, you can safely ignore this email.</p>
+    </div>
+  `
+}
+
 export const EmailService = {
   async sendWelcome({ to, name }) {
     if (!resend) {
@@ -61,6 +76,20 @@ export const EmailService = {
       to,
       subject: 'Reset your THREAD password',
       html: passwordResetTemplate({ resetUrl }),
+    })
+  },
+
+  async sendVerification({ to, verifyUrl }) {
+    if (!resend) {
+      console.log(`📧 [DEV] Verify email to ${to}: ${verifyUrl}`)
+      return { id: 'dev-mode' }
+    }
+    return resend.emails.send({
+      from: FROM_EMAIL,
+      reply_to: REPLY_TO,
+      to,
+      subject: 'Verify your THREAD email',
+      html: verifyEmailTemplate({ verifyUrl }),
     })
   },
 
