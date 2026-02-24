@@ -12,12 +12,30 @@
 - ~~**Backup to R2** — stubbed (scripts/backup-r2.sh, needs R2 credentials)~~
 - ~~**GDPR compliance** — data export + account deletion~~
 
-## 🟡 Priority 2 — Before Launch
+## 🟡 Priority 2 — Before Launch (Payments)
 
-- ~~**Password Reset** — /auth/forgot-password, /auth/reset-password~~
-- ~~**Resend transactional email** — welcome, password reset, billing~~
-- ~~**Email Verification** — verify email on signup~~
-- ~~**AI rate limiting** — per-user, per-plan limits on Gemini calls~~
+> **Note:** Cart before the horse — focus on core app first. These are stubbed and tested.
+
+- ~~**Lago skeleton** — EntitlementService, LagoService, webhooks, checkout/portal routes~~
+- ~~**Billing tests stubbed** — entitlement-service.test.js, lago-service.test.js, billing-routes.test.js~~
+- **Stripe integration** — Wire Stripe behind Lago (Lago orchestrates Stripe)
+- **Checkout UI** — React components for upgrade flow
+- **Customer portal UI** — Manage subscription UI
+- **Plan limits enforcement** — Wire requireEntitlement middleware to items/outfits routes
+- **R2 credentials** — Get from Cloudflare Dashboard → R2 → Manage API Tokens
+
+### Payment Next Steps (documented, not implemented)
+1. Create Lago Cloud account (free tier)
+2. Define plans: free, starter ($4.99), pro ($9.99), unlimited ($19.99)
+3. Connect Stripe in Lago dashboard
+4. Add Lago API key + webhook secret to `.env`
+5. Wire `requireEntitlement('items')` to POST /api/v1/items
+6. Wire `requireEntitlement('outfits')` to POST /api/v1/outfits
+7. Build checkout React UI → POST /billing/checkout → redirect to checkout_url
+8. Build portal UI → GET /billing/portal → redirect to portal_url
+9. Test webhook locally with Stripe CLI
+
+See: `docs/02-PAYMENTS-ARCHITECTURE.md`
 
 ## 📋 Backlog
 
