@@ -104,7 +104,7 @@ export class StripeService {
     }
 
     try {
-      return stripe.webhooks.constructEvent(
+      return this.stripe.webhooks.constructEvent(
         payload,
         signature,
         process.env.STRIPE_WEBHOOK_SECRET
