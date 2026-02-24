@@ -83,6 +83,70 @@ describe('LagoService', () => {
       await expect(svc.createCustomer({ userId: 456, email: 'test@example.com' }))
         .rejects.toThrow('Lago createCustomer failed: 422 Unprocessable entity')
     })
+
+    it('handles network timeout', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockRejectedValueOnce(new Error('Network timeout'))
+
+      await expect(svc.createCustomer({ userId: 456, email: 'test@example.com' }))
+        .rejects.toThrow('Network timeout')
+    })
+
+    it('handles 5xx server error', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        text: async () => 'Service unavailable'
+      })
+
+      await expect(svc.createCustomer({ userId: 456, email: 'test@example.com' }))
+        .rejects.toThrow('Lago createCustomer failed: 503 Service unavailable')
+    })
+
+    it('handles 429 rate limit', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        text: async () => 'Rate limit exceeded'
+      })
+
+      await expect(svc.createCustomer({ userId: 456, email: 'test@example.com' }))
+        .rejects.toThrow('Lago createCustomer failed: 429 Rate limit exceeded')
+    })
+
+    it('handles malformed JSON response', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => { throw new Error('Invalid JSON') }
+      })
+
+      await expect(svc.createCustomer({ userId: 456, email: 'test@example.com' }))
+        .rejects.toThrow('Invalid JSON')
+    })
+
+    it('handles missing customer in response', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ wrong_key: 'value' })
+      })
+
+      const result = await svc.createCustomer({ userId: 456, email: 'test@example.com' })
+      expect(result.lago_customer_id).toBeUndefined()
+    })
   })
 
   describe('createSubscription', () => {
@@ -120,6 +184,20 @@ describe('LagoService', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith('[LAGO] [DEV] Would subscribe lago_123 to pro')
       expect(result).toEqual({ lago_subscription_id: expect.stringContaining('dev_sub_') })
+    })
+
+    it('handles server error on subscription', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal error'
+      })
+
+      await expect(svc.createSubscription({ lagoCustomerId: 'lago_123', planCode: 'pro' }))
+        .rejects.toThrow('Lago createSubscription failed: 500 Internal error')
     })
   })
 
@@ -159,6 +237,16 @@ describe('LagoService', () => {
       expect(consoleSpy).toHaveBeenCalledWith('[LAGO] [DEV] Would cancel subscription sub_789')
       expect(result).toEqual({ success: true })
     })
+
+    it('throws on other errors', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({ ok: false, status: 500 })
+
+      await expect(svc.cancelSubscription({ lagoSubscriptionId: 'sub_789' }))
+        .rejects.toThrow('Lago cancelSubscription failed: 500')
+    })
   })
 
   describe('createCheckout', () => {
@@ -197,6 +285,43 @@ describe('LagoService', () => {
       )
       expect(result.checkout_url).toBe('https://checkout.lago.com/abc')
     })
+
+    it('handles missing checkout URL in response', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ checkout: {} })
+      })
+
+      const result = await svc.createCheckout({
+        lagoCustomerId: 'lago_123',
+        planCode: 'pro',
+        successUrl: 'http://localhost:5173/success',
+        cancelUrl: 'http://localhost:5173/cancel'
+      })
+
+      expect(result.checkout_url).toBeUndefined()
+    })
+
+    it('throws on checkout error', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => 'Bad request'
+      })
+
+      await expect(svc.createCheckout({
+        lagoCustomerId: 'lago_123',
+        planCode: 'pro',
+        successUrl: 'http://localhost:5173/success',
+        cancelUrl: 'http://localhost:5173/cancel'
+      })).rejects.toThrow('Lago createCheckout failed: 400 Bad request')
+    })
   })
 
   describe('createPortalUrl', () => {
@@ -230,6 +355,59 @@ describe('LagoService', () => {
         expect.objectContaining({ method: 'POST' })
       )
       expect(result.portal_url).toBe('https://portal.lago.com/xyz')
+    })
+
+    it('handles missing portal URL in response', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ portal_url: {} })
+      })
+
+      const result = await svc.createPortalUrl({
+        lagoCustomerId: 'lago_123',
+        returnUrl: 'http://localhost:5173/billing'
+      })
+
+      expect(result.portal_url).toBeUndefined()
+    })
+
+    it('throws on portal error', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Customer not found'
+      })
+
+      await expect(svc.createPortalUrl({
+        lagoCustomerId: 'lago_123',
+        returnUrl: 'http://localhost:5173/billing'
+      })).rejects.toThrow('Lago createPortalUrl failed: 404 Customer not found')
+    })
+  })
+
+  describe('API URL configuration', () => {
+    it('uses custom API URL when set', async () => {
+      process.env.LAGO_API_KEY = 'lago_test_key'
+      process.env.LAGO_API_URL = 'https://custom.lago.example.com'
+      const svc = new LagoService()
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ customer: { lago_id: 'lago_123' } })
+      })
+
+      await svc.createCustomer({ userId: 456, email: 'test@example.com' })
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://custom.lago.example.com/v1/customers',
+        expect.anything()
+      )
     })
   })
 })

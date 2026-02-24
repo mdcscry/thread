@@ -39,6 +39,7 @@ describe('StripeService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     delete process.env.STRIPE_SECRET_KEY
+    delete process.env.STRIPE_WEBHOOK_SECRET
     service = new StripeService()
   })
 
@@ -79,6 +80,34 @@ describe('StripeService', () => {
       })
       expect(result).toEqual({ id: 'cus_123' })
     })
+
+    it('passes metadata through', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockCustomer = { id: 'cus_123' }
+      svc.stripe.customers.create.mockResolvedValue(mockCustomer)
+
+      await svc.createCustomer({ 
+        email: 'test@example.com', 
+        name: 'Test',
+        metadata: { userId: '456', source: 'web' }
+      })
+
+      expect(svc.stripe.customers.create).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        name: 'Test',
+        metadata: { userId: '456', source: 'web' },
+      })
+    })
+
+    it('throws on Stripe API error', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      svc.stripe.customers.create.mockRejectedValue(new Error('Stripe API error'))
+
+      await expect(svc.createCustomer({ email: 'test@example.com' }))
+        .rejects.toThrow('Stripe API error')
+    })
   })
 
   describe('createPaymentIntent', () => {
@@ -108,6 +137,28 @@ describe('StripeService', () => {
       })
       expect(result).toEqual(mockPI)
     })
+
+    it('uses custom currency when provided', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockPI = { id: 'pi_123', client_secret: 'secret_123' }
+      svc.stripe.paymentIntents.create.mockResolvedValue(mockPI)
+
+      await svc.createPaymentIntent({ amount: 999, currency: 'eur', customerId: 'cus_123' })
+
+      expect(svc.stripe.paymentIntents.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'eur' })
+      )
+    })
+
+    it('handles payment intent errors', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      svc.stripe.paymentIntents.create.mockRejectedValue(new Error('Card declined'))
+
+      await expect(svc.createPaymentIntent({ amount: 999, customerId: 'cus_123' }))
+        .rejects.toThrow('Card declined')
+    })
   })
 
   describe('getPaymentMethods', () => {
@@ -130,6 +181,15 @@ describe('StripeService', () => {
       })
       expect(result.data).toHaveLength(2)
     })
+
+    it('handles API errors', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      svc.stripe.paymentMethods.list.mockRejectedValue(new Error('Not found'))
+
+      await expect(svc.getPaymentMethods('cus_123'))
+        .rejects.toThrow('Not found')
+    })
   })
 
   describe('createCheckoutSession', () => {
@@ -150,7 +210,7 @@ describe('StripeService', () => {
       const mockSession = { url: 'https://checkout.stripe.com/c/pay/cs_123' }
       svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await svc.createCheckoutSession({
+      const result = await service.createCheckoutSession({
         customerId: 'cus_123',
         lineItems: [{ price: 'price_123', quantity: 1 }],
         successUrl: 'http://localhost:5173/success',
@@ -159,6 +219,56 @@ describe('StripeService', () => {
 
       expect(svc.stripe.checkout.sessions.create).toHaveBeenCalled()
       expect(result.url).toBe('https://checkout.stripe.com/c/pay/cs_123')
+    })
+
+    it('handles 3D Secure required', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockSession = { 
+        url: 'https://checkout.stripe.com/c/pay/cs_123',
+        payment_intent: { id: 'pi_123', status: 'requires_action' }
+      }
+      svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
+
+      const result = await service.createCheckoutSession({
+        customerId: 'cus_123',
+        lineItems: [{ price: 'price_123', quantity: 1 }],
+        successUrl: 'http://localhost:5173/success',
+        cancelUrl: 'http://localhost:5173/cancel',
+      })
+
+      // Should still return the URL even with 3DS
+      expect(result.url).toContain('checkout.stripe.com')
+    })
+
+    it('handles checkout errors', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      svc.stripe.checkout.sessions.create.mockRejectedValue(new Error('Product not found'))
+
+      await expect(service.createCheckoutSession({
+        customerId: 'cus_123',
+        lineItems: [{ price: 'price_123', quantity: 1 }],
+        successUrl: 'http://localhost:5173/success',
+        cancelUrl: 'http://localhost:5173/cancel',
+      })).rejects.toThrow('Product not found')
+    })
+
+    it('handles expired session', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockSession = { url: null, expired: true }
+      svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
+
+      const result = await service.createCheckoutSession({
+        customerId: 'cus_123',
+        lineItems: [{ price: 'price_123', quantity: 1 }],
+        successUrl: 'http://localhost:5173/success',
+        cancelUrl: 'http://localhost:5173/cancel',
+      })
+
+      // Should handle gracefully
+      expect(result.url).toBeNull()
     })
   })
 
@@ -178,7 +288,7 @@ describe('StripeService', () => {
       const mockSession = { url: 'https://billing.stripe.com/session/bps_123' }
       svc.stripe.billingPortal.sessions.create.mockResolvedValue(mockSession)
 
-      const result = await svc.createPortalSession({
+      const result = await service.createPortalSession({
         customerId: 'cus_123',
         returnUrl: 'http://localhost:5173/billing',
       })
@@ -188,6 +298,17 @@ describe('StripeService', () => {
         return_url: 'http://localhost:5173/billing',
       })
       expect(result.url).toBe('https://billing.stripe.com/session/bps_123')
+    })
+
+    it('handles portal errors', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      svc.stripe.billingPortal.sessions.create.mockRejectedValue(new Error('Customer not found'))
+
+      await expect(service.createPortalSession({
+        customerId: 'cus_123',
+        returnUrl: 'http://localhost:5173/billing',
+      })).rejects.toThrow('Customer not found')
     })
   })
 
@@ -227,6 +348,58 @@ describe('StripeService', () => {
       const result = svc.verifyWebhookSignature('payload', 'invalid_sig')
 
       expect(result).toBeNull()
+    })
+
+    it('handles malformed payload', () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_123'
+      const svc = new StripeService()
+      svc.stripe.webhooks.constructEvent.mockImplementation(() => {
+        throw new Error('No compatible overload')
+      })
+
+      const result = svc.verifyWebhookSignature('invalid{json', 'signature')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('edge cases', () => {
+    it('handles missing optional parameters', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockCustomer = { id: 'cus_123' }
+      svc.stripe.customers.create.mockResolvedValue(mockCustomer)
+
+      // Should not throw with minimal params
+      const result = await svc.createCustomer({ email: 'test@example.com' })
+      expect(result.id).toBeDefined()
+    })
+
+    it('handles zero amount', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockPI = { id: 'pi_123', client_secret: 'secret_123' }
+      svc.stripe.paymentIntents.create.mockResolvedValue(mockPI)
+
+      const result = await svc.createPaymentIntent({ amount: 0, customerId: 'cus_123' })
+      expect(result.id).toBeDefined()
+    })
+
+    it('handles empty line items', async () => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_123'
+      const svc = new StripeService()
+      const mockSession = { url: 'https://checkout.stripe.com/c/pay/cs_123' }
+      svc.stripe.checkout.sessions.create.mockResolvedValue(mockSession)
+
+      const result = await service.createCheckoutSession({
+        customerId: 'cus_123',
+        lineItems: [],
+        successUrl: 'http://localhost:5173/success',
+        cancelUrl: 'http://localhost:5173/cancel',
+      })
+
+      expect(result.url).toBeDefined()
     })
   })
 })
