@@ -54,38 +54,50 @@ db.run(
 const userRows = db.exec('SELECT id FROM users WHERE api_key = ?', [TEST_USER.api_key])
 const userId = userRows?.[0]?.values?.[0]?.[0] ?? 1
 
-// --- Seed wardrobe items from local test images ---
-const imageDir = path.join(REPO_ROOT, 'data/test-images/blueowl/male')
-const BASE_URL = 'https://glyphmatic.us/tools/thread/male'
+// --- Seed wardrobe items — small curated subset, one per major category ---
+// Male: from data/test-images/male/ (old numbered files still present)
+// Female: from data/test-images/female/
+// Keep this small — tests need coverage, not volume.
+
+const MALE_DIR   = path.join(REPO_ROOT, 'data/test-images/male')
+const FEMALE_DIR = path.join(REPO_ROOT, 'data/test-images/female')
 
 const ITEMS = [
-  { file: '01-tshirt.jpg',   name: 'White T-Shirt',      category: 'Tops',        subcategory: 'T-Shirt',  primary_color: '#FFFFFF', formality: 2, pattern: 'solid',    material: 'cotton' },
-  { file: '02-buttonup.jpg', name: 'Blue Button-Up',     category: 'Tops',        subcategory: 'Shirt',    primary_color: '#4A90D9', formality: 5, pattern: 'solid',    material: 'cotton' },
-  { file: '03-knitwear.jpg', name: 'Grey Knitwear',      category: 'Tops',        subcategory: 'Sweater',  primary_color: '#888888', formality: 4, pattern: 'textured', material: 'wool' },
-  { file: '04-hoodie.jpg',   name: 'Black Hoodie',       category: 'Tops',        subcategory: 'Hoodie',   primary_color: '#111111', formality: 2, pattern: 'solid',    material: 'fleece' },
-  { file: '05-jacket.jpg',   name: 'Navy Jacket',        category: 'Outerwear',   subcategory: 'Jacket',   primary_color: '#1A2A4A', formality: 6, pattern: 'solid',    material: 'polyester' },
-  { file: '06-jeans.jpg',    name: 'Dark Jeans',         category: 'Bottoms',     subcategory: 'Jeans',    primary_color: '#2B3A5E', formality: 3, pattern: 'solid',    material: 'denim' },
-  { file: '07-pants.jpg',    name: 'Chino Pants',        category: 'Bottoms',     subcategory: 'Pants',    primary_color: '#C8A882', formality: 5, pattern: 'solid',    material: 'cotton' },
-  { file: '09-boots.jpg',    name: 'Brown Boots',        category: 'Footwear',    subcategory: 'Boots',    primary_color: '#6B3A2A', formality: 5, pattern: 'solid',    material: 'leather' },
-  { file: '10-shoes.jpg',    name: 'White Sneakers',     category: 'Footwear',    subcategory: 'Sneakers', primary_color: '#F5F5F5', formality: 2, pattern: 'solid',    material: 'canvas' },
-  { file: '11-sandals.jpg',  name: 'Tan Sandals',        category: 'Footwear',    subcategory: 'Sandals',  primary_color: '#C8A470', formality: 1, pattern: 'solid',    material: 'leather' },
-  { file: '12-belt.jpg',     name: 'Black Leather Belt', category: 'Accessories', subcategory: 'Belt',     primary_color: '#111111', formality: 5, pattern: 'solid',    material: 'leather' },
-  { file: '13-hat.jpg',      name: 'Grey Baseball Cap',  category: 'Accessories', subcategory: 'Hat',      primary_color: '#777777', formality: 1, pattern: 'solid',    material: 'cotton' },
-  { file: '14-socks.jpg',    name: 'White Socks',        category: 'Accessories', subcategory: 'Socks',   primary_color: '#FFFFFF', formality: 2, pattern: 'solid',    material: 'cotton' },
+  // --- Male (9 items) ---
+  { dir: MALE_DIR,   file: '01-tshirt.jpg',                                      name: 'White T-Shirt',        category: 'Tops',        subcategory: 'T-Shirt',   primary_color: '#FFFFFF', formality: 2, pattern: 'solid',    material: 'cotton',     gender: 'male' },
+  { dir: MALE_DIR,   file: '02-buttonup.jpg',                                    name: 'Blue Button-Up',       category: 'Tops',        subcategory: 'Shirt',     primary_color: '#4A90D9', formality: 5, pattern: 'solid',    material: 'cotton',     gender: 'male' },
+  { dir: MALE_DIR,   file: '03-knitwear.jpg',                                    name: 'Grey Sweater',         category: 'Tops',        subcategory: 'Sweater',   primary_color: '#888888', formality: 4, pattern: 'textured', material: 'wool',       gender: 'male' },
+  { dir: MALE_DIR,   file: '05-jacket.jpg',                                      name: 'Navy Jacket',          category: 'Outerwear',   subcategory: 'Jacket',    primary_color: '#1A2A4A', formality: 6, pattern: 'solid',    material: 'polyester',  gender: 'male' },
+  { dir: MALE_DIR,   file: '06-jeans.jpg',                                       name: 'Dark Jeans',           category: 'Bottoms',     subcategory: 'Jeans',     primary_color: '#2B3A5E', formality: 3, pattern: 'solid',    material: 'denim',      gender: 'male' },
+  { dir: MALE_DIR,   file: '07-pants.jpg',                                       name: 'Chino Pants',          category: 'Bottoms',     subcategory: 'Pants',     primary_color: '#C8A882', formality: 5, pattern: 'solid',    material: 'cotton',     gender: 'male' },
+  { dir: MALE_DIR,   file: '09-boots.jpg',                                       name: 'Brown Boots',          category: 'Footwear',    subcategory: 'Boots',     primary_color: '#6B3A2A', formality: 5, pattern: 'solid',    material: 'leather',    gender: 'male' },
+  { dir: MALE_DIR,   file: '12-belt.jpg',                                        name: 'Black Belt',           category: 'Accessories', subcategory: 'Belt',      primary_color: '#111111', formality: 5, pattern: 'solid',    material: 'leather',    gender: 'male' },
+  { dir: MALE_DIR,   file: '13-hat.jpg',                                         name: 'Grey Baseball Cap',    category: 'Accessories', subcategory: 'Hat',       primary_color: '#777777', formality: 1, pattern: 'solid',    material: 'cotton',     gender: 'male' },
+
+  // --- Female (9 items) ---
+  { dir: FEMALE_DIR, file: '01-tissue-short-sleeve-v-neck-top.jpg',              name: 'White V-Neck Top',     category: 'Tops',        subcategory: 'T-Shirt',   primary_color: '#FFFFFF', formality: 3, pattern: 'solid',    material: 'cotton',     gender: 'female' },
+  { dir: FEMALE_DIR, file: '01-tropical-wool-blazer--dark-nav.jpg',              name: 'Navy Blazer',          category: 'Outerwear',   subcategory: 'Jacket',    primary_color: '#1A2A4A', formality: 7, pattern: 'solid',    material: 'wool',       gender: 'female' },
+  { dir: FEMALE_DIR, file: '01-the-utility-straight-leg-pant-.jpg',              name: 'Straight Leg Pant',    category: 'Bottoms',     subcategory: 'Pants',     primary_color: '#333333', formality: 5, pattern: 'solid',    material: 'cotton',     gender: 'female' },
+  { dir: FEMALE_DIR, file: '04-carpenter-jeans.jpg',                             name: 'Carpenter Jeans',      category: 'Bottoms',     subcategory: 'Jeans',     primary_color: '#3A5A8A', formality: 2, pattern: 'solid',    material: 'denim',      gender: 'female' },
+  { dir: FEMALE_DIR, file: '03-tianna-dress--powder-puff.jpg',                   name: 'Powder Puff Dress',    category: 'Dresses',     subcategory: 'Dress',     primary_color: '#F5C5C5', formality: 6, pattern: 'solid',    material: 'silk',       gender: 'female' },
+  { dir: FEMALE_DIR, file: '03-leta-skirt--snow-white.jpg',                      name: 'White Skirt',          category: 'Bottoms',     subcategory: 'Skirt',     primary_color: '#FFFFFF', formality: 5, pattern: 'solid',    material: 'cotton',     gender: 'female' },
+  { dir: FEMALE_DIR, file: '03-kinzee-boots--white-leather.jpg',                 name: 'White Leather Boots',  category: 'Footwear',    subcategory: 'Boots',     primary_color: '#FFFFFF', formality: 4, pattern: 'solid',    material: 'leather',    gender: 'female' },
+  { dir: FEMALE_DIR, file: '03-andromeda-heels--brown-leather.jpg',              name: 'Brown Heels',          category: 'Footwear',    subcategory: 'Heels',     primary_color: '#6B3A2A', formality: 7, pattern: 'solid',    material: 'leather',    gender: 'female' },
+  { dir: FEMALE_DIR, file: '01-canvas-mini-lug-tote--birch.jpg',                 name: 'Canvas Tote Bag',      category: 'Accessories', subcategory: 'Handbag',   primary_color: '#D4C4A0', formality: 3, pattern: 'solid',    material: 'canvas',     gender: 'female' },
 ]
 
 const imagesDestDir = path.join(REPO_ROOT, 'data/images')
 if (!existsSync(imagesDestDir)) mkdirSync(imagesDestDir, { recursive: true })
 
 for (const item of ITEMS) {
-  const srcPath = path.join(imageDir, item.file)
-  const destPath = path.join(imagesDestDir, `test-${item.file}`)
+  const srcPath = path.join(item.dir, item.file)
+  const destPath = path.join(imagesDestDir, `test-${item.gender}-${item.file}`)
   if (existsSync(srcPath) && !existsSync(destPath)) {
     copyFileSync(srcPath, destPath)
   }
 
-  const imageUrl = `/data/images/test-${item.file}`
-  const sourceUrl = `${BASE_URL}/${item.file}`
+  const imageUrl = `/data/images/test-${item.gender}-${item.file}`
+  const sourceUrl = `https://glyphmatic.us/tools/thread/${item.gender}/${item.file}`
 
   db.run(
     `INSERT OR IGNORE INTO clothing_items
@@ -96,7 +108,6 @@ for (const item of ITEMS) {
      item.primary_color, item.formality, item.pattern, item.material]
   )
 
-  // Get item id via parameterized query
   const itemRows = db.exec('SELECT id FROM clothing_items WHERE source_url = ? AND user_id = ?', [sourceUrl, userId])
   const itemId = itemRows?.[0]?.values?.[0]?.[0]
   if (itemId) {
