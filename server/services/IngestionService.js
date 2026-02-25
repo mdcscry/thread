@@ -2,24 +2,14 @@ import fetch from 'node-fetch'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import sharp from 'sharp'
 import db, { runExec, runQuery, saveDb } from '../db/client.js'
 import OllamaService from './OllamaService.js'
-
-const IMAGE_ROOT = process.env.IMAGE_STORAGE_PATH || '/Users/matthewcryer/Documents/outerfit/data/images'
-
-// Returns { diskPath, dbPath } — diskPath for sharp/fs, dbPath for DB storage
-function imagePaths(userId, hash, suffix) {
-  const filename = `${hash}_${suffix}.jpg`
-  return {
-    diskPath: path.join(IMAGE_ROOT, `user_${userId}`, filename),
-    dbPath: `user_${userId}/${filename}`
-  }
-}
+import { ImageService } from './ImageService.js'
 
 export class IngestionService {
   constructor() {
     this.ollama = new OllamaService()
+    this.imageService = new ImageService()
   }
 
   async startJob(userId, sourceUrl, sourceType = 'google_drive', model = null) {
@@ -148,20 +138,11 @@ export class IngestionService {
     const buffer = await response.arrayBuffer()
     const inputBuffer = Buffer.from(buffer)
 
-    // Generate hash for filename
-    const hash = crypto.createHash('md5').update(inputBuffer).digest('hex').slice(0, 12)
-    
-    // Ensure user directory exists
-    const userDir = path.join(IMAGE_ROOT, `user_${userId}`)
-    if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true })
-
-    const full   = imagePaths(userId, hash, 'full')
-    const medium = imagePaths(userId, hash, 'medium')
-    const thumb  = imagePaths(userId, hash, 'thumb')
-
-    await sharp(inputBuffer).jpeg({ quality: 90 }).toFile(full.diskPath)
-    await sharp(inputBuffer).resize(800, 800, { fit: 'inside' }).jpeg({ quality: 85 }).toFile(medium.diskPath)
-    await sharp(inputBuffer).resize(300, 300, { fit: 'cover', position: 'top' }).jpeg({ quality: 80 }).toFile(thumb.diskPath)
+    // Compress + normalize via ImageService (single source of truth)
+    const imgs = await this.imageService.processAndStore(inputBuffer, userId)
+    const full   = { diskPath: imgs.diskFull,   dbPath: imgs.pathFull }
+    const medium = { diskPath: imgs.diskMedium, dbPath: imgs.pathMedium }
+    const thumb  = { diskPath: imgs.diskThumb,  dbPath: imgs.pathThumb }
 
     // Analyze with Ollama
     let analysis = null
@@ -236,21 +217,15 @@ export class IngestionService {
     return itemId
   }
 
-  // Process a single photo (from camera)
+  // Process a single photo (from direct upload or URL)
   async processSinglePhoto(userId, buffer, filename = 'photo.jpg') {
     const inputBuffer = Buffer.from(buffer)
-    const hash = crypto.createHash('md5').update(inputBuffer).digest('hex').slice(0, 12)
-    
-    const userDir = path.join(IMAGE_ROOT, `user_${userId}`)
-    if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true })
 
-    const full   = imagePaths(userId, hash, 'full')
-    const medium = imagePaths(userId, hash, 'medium')
-    const thumb  = imagePaths(userId, hash, 'thumb')
-
-    await sharp(inputBuffer).jpeg({ quality: 90 }).toFile(full.diskPath)
-    await sharp(inputBuffer).resize(800, 800, { fit: 'inside' }).jpeg({ quality: 85 }).toFile(medium.diskPath)
-    await sharp(inputBuffer).resize(300, 300, { fit: 'cover', position: 'top' }).jpeg({ quality: 80 }).toFile(thumb.diskPath)
+    // Compress + normalize via ImageService (single source of truth)
+    const imgs = await this.imageService.processAndStore(inputBuffer, userId)
+    const full   = { diskPath: imgs.diskFull,   dbPath: imgs.pathFull }
+    const medium = { diskPath: imgs.diskMedium, dbPath: imgs.pathMedium }
+    const thumb  = { diskPath: imgs.diskThumb,  dbPath: imgs.pathThumb }
 
     // FAST: Insert immediately with pending status, queue for async AI analysis
     const { lastInsertRowid: itemId } = runExec(`
