@@ -1,6 +1,6 @@
 # THREAD Image Standards & Compression
 
-*Last Updated: 2026-02-23*
+*Last Updated: 2026-02-25*
 *Product: outerfit.net | Internal codename: THREAD*
 
 ---
@@ -16,12 +16,25 @@ Every wardrobe item in outerfit is represented by a photo. Photo quality directl
 │  User captures photo      │  Phone camera, 3:4 portrait             │
 │  Client preview           │  Canvas API auto-crops to 3:4           │
 │  Client compress          │  Resize to 1200×1600px, WebP 85%        │
-│  Upload                   │  Compressed WebP sent to server         │
-│  Server validate          │  Sharp enforces standards, rejects junk │
-│  Server store             │  Final WebP written to images/          │
-│  Gemini analysis          │  Consistent input = better results      │
+│  Upload (3 routes)        │  upload-photo / upload-from-url / batch  │
+│  ImageService             │  Single pipeline: validate, rotate, 3x  │
+│  Server store (3 sizes)   │  full / medium / thumb — all WebP       │
+│  Gemini analysis          │  medium (800×800) sent to Flash         │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+## Upload Routes
+
+All three routes funnel through `ImageService.processAndStore()` — single source of truth.
+
+| Route | Usage |
+|-------|-------|
+| `POST /api/v1/ingestion/upload-photo` | GUI multipart upload |
+| `POST /api/v1/ingestion/upload-from-url` | Fetch image by URL (glyphmatic.us, CDN, etc.) |
+| `POST /api/v1/ingestion/start` | Batch job (Google Drive folder) |
+
+> **URL source rule:** Always use `https://glyphmatic.us/tools/thread/` for test image URLs.
+> Never use Shopify CDN URLs directly — they expire when products are updated.
 
 ---
 
@@ -30,12 +43,17 @@ Every wardrobe item in outerfit is represented by a photo. Photo quality directl
 | Property | Value | Rationale |
 |----------|-------|-----------|
 | Aspect ratio | 3:4 (portrait) | Default for iPhone and Samsung in portrait mode |
-| Target resolution | 1200 × 1600px | Sufficient for Gemini vision detail, manageable file size |
-| Max resolution | 2400 × 3200px | 2x for high-DPI screens, above this is wasteful |
 | Format | WebP | 25-35% smaller than JPEG at same quality, wide support |
-| Quality | 85% | Sharp enough for AI analysis, ~150-250KB per image |
-| Max file size | 2MB | Hard server-side limit before processing |
+| Max upload size | 2MB | Hard server-side limit before processing |
 | Min resolution | 400 × 533px | Below this Gemini struggles to identify attributes |
+
+### Three Output Sizes (all WebP)
+
+| Size | Dimensions | Quality | Use |
+|------|-----------|---------|-----|
+| **full** | 1200 × 1600 | 85% | Storage, display |
+| **medium** | 800 × 800 | 82% | Gemini vision analysis |
+| **thumb** | 300 × 300 | 78% | UI thumbnails |
 
 ### Why 3:4 Portrait
 
