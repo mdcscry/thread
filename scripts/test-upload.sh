@@ -2,10 +2,11 @@
 # Test both upload methods: local files + URL ingestion
 # Usage: bash scripts/test-upload.sh
 
-API="http://localhost:3000"
+API="https://localhost:3000/api/v1"
 API_KEY="thread_sk_41eb7a2f83b0c870e77d87dc669e8f781dbf8de040b57934"
 FEMALE_DIR="data/test-images/female"
 MALE_DIR="data/test-images/male"
+CURL="curl -sk"  # -k = skip TLS verify for localhost self-signed cert
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -17,7 +18,7 @@ ok=0; fail=0
 upload_file() {
   local file="$1"
   local label="$2"
-  local resp=$(curl -s -X POST "$API/ingestion/upload-photo" \
+  local resp=$($CURL -X POST "$API/ingestion/upload-photo" \
     -H "Authorization: Bearer $API_KEY" \
     -F "file=@$file" \
     -w "\n%{http_code}")
@@ -35,7 +36,7 @@ upload_file() {
 upload_url() {
   local url="$1"
   local label="$2"
-  local resp=$(curl -s -X POST "$API/ingestion/upload-from-url" \
+  local resp=$($CURL -X POST "$API/ingestion/upload-from-url" \
     -H "Authorization: Bearer $API_KEY" \
     -H "Content-Type: application/json" \
     -d "{\"url\": \"$url\"}" \
