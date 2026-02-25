@@ -3,6 +3,8 @@ import { requireEntitlement } from '../middleware/entitlements.js'
 import IngestionService from '../services/IngestionService.js'
 import { RateLimitService } from '../services/RateLimitService.js'
 import { ImageService } from '../services/ImageService.js'
+import https from 'https'
+import http from 'http'
 
 let ingestionService = null
 let imageService = null
@@ -139,6 +141,65 @@ export default async function ingestionRoutes(fastify, opts) {
       }
     } catch (err) {
       console.error('Upload error:', err)
+      return reply.code(500).send({ error: err.message })
+    }
+  })
+
+  // Upload photo from URL
+  fastify.post('/ingestion/upload-from-url', { preHandler: [authenticateApiKey] }, async (request, reply) => {
+    const { userId } = request.user
+    const { url, filename } = request.body
+
+    if (!url) {
+      return reply.code(400).send({ error: 'url is required' })
+    }
+
+    // Only allow http/https
+    let parsedUrl
+    try {
+      parsedUrl = new URL(url)
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return reply.code(400).send({ error: 'Only http/https URLs are supported' })
+      }
+    } catch {
+      return reply.code(400).send({ error: 'Invalid URL' })
+    }
+
+    try {
+      // Fetch the image
+      const buffer = await new Promise((resolve, reject) => {
+        const client = parsedUrl.protocol === 'https:' ? https : http
+        const req = client.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 }, (res) => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Failed to fetch image: HTTP ${res.statusCode}`))
+          }
+          const contentType = res.headers['content-type'] || ''
+          if (!contentType.startsWith('image/')) {
+            return reject(new Error(`URL does not point to an image (${contentType})`))
+          }
+          const chunks = []
+          res.on('data', chunk => chunks.push(chunk))
+          res.on('end', () => resolve(Buffer.concat(chunks)))
+          res.on('error', reject)
+        })
+        req.on('error', reject)
+        req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')) })
+      })
+
+      if (buffer.length > 10 * 1024 * 1024) {
+        return reply.code(400).send({ error: 'Image too large (max 10MB)' })
+      }
+
+      const derivedFilename = filename || parsedUrl.pathname.split('/').pop() || 'photo.jpg'
+      const itemId = await ingestionService.processSinglePhoto(userId, buffer, derivedFilename)
+
+      return {
+        success: true,
+        itemId,
+        message: 'Photo fetched from URL and added to wardrobe'
+      }
+    } catch (err) {
+      console.error('Upload-from-url error:', err)
       return reply.code(500).send({ error: err.message })
     }
   })
