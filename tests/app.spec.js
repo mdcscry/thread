@@ -18,7 +18,7 @@ test.describe('THREAD App', () => {
       await expect(page.locator('input[type="email"]')).toBeVisible();
       
       // Login
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'thread123');
       await page.click('button:has-text("Login")');
       
@@ -29,7 +29,7 @@ test.describe('THREAD App', () => {
     test('login shows error with wrong password', async ({ page }) => {
       await page.goto(BASE_URL);
       
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'wrongpassword');
       await page.click('button:has-text("Login")');
       
@@ -42,7 +42,7 @@ test.describe('THREAD App', () => {
     test.beforeEach(async ({ page }) => {
       // Login first
       await page.goto(BASE_URL);
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'thread123');
       await page.click('button:has-text("Login")');
       await expect(page.locator('.logo:has-text("THREAD")')).toBeVisible({ timeout: 10000 });
@@ -81,7 +81,7 @@ test.describe('THREAD App', () => {
   test.describe('Profiles', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto(BASE_URL);
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'thread123');
       await page.click('button:has-text("Login")');
       await expect(page.locator('.logo:has-text("THREAD")')).toBeVisible({ timeout: 10000 });
@@ -115,7 +115,7 @@ test.describe('THREAD App', () => {
   test.describe('Settings', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto(BASE_URL);
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'thread123');
       await page.click('button:has-text("Login")');
       await expect(page.locator('.logo:has-text("THREAD")')).toBeVisible({ timeout: 10000 });
@@ -137,7 +137,7 @@ test.describe('THREAD App', () => {
   test.describe('Outfits', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto(BASE_URL);
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'thread123');
       await page.click('button:has-text("Login")');
       await expect(page.locator('.logo:has-text("THREAD")')).toBeVisible({ timeout: 10000 });
@@ -153,7 +153,7 @@ test.describe('THREAD App', () => {
   test.describe('Camera/Upload', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto(BASE_URL);
-      await page.fill('input[type="email"]', 'you@localhost');
+      await page.fill('input[type="email"]', 'you@local.test');
       await page.fill('input[type="password"]', 'thread123');
       await page.click('button:has-text("Login")');
       await expect(page.locator('.logo:has-text("THREAD")')).toBeVisible({ timeout: 10000 });

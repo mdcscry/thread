@@ -95,15 +95,15 @@ test.describe('Billing API - Authenticated', () => {
   // These tests would need authenticated users
   // Documenting expected behavior
 
-  test.todo('GET /api/v1/billing/entitlement returns entitlement for authenticated user')
+  test.skip('GET /api/v1/billing/entitlement returns entitlement for authenticated user')
 
-  test.todo('GET /api/v1/billing/entitlement returns usage counts')
+  test.skip('GET /api/v1/billing/entitlement returns usage counts')
 
-  test.todo('POST /api/v1/billing/checkout returns checkout_url for valid plan')
+  test.skip('POST /api/v1/billing/checkout returns checkout_url for valid plan')
 
-  test.todo('POST /api/v1/billing/checkout returns 400 for user without email')
+  test.skip('POST /api/v1/billing/checkout returns 400 for user without email')
 
-  test.todo('GET /api/v1/billing/portal returns portal_url for user with subscription')
+  test.skip('GET /api/v1/billing/portal returns portal_url for user with subscription')
 })
 
 test.describe('Webhooks API', () => {
@@ -262,20 +262,20 @@ test.describe('Webhooks API', () => {
     // Would verify DB entry in full integration test
   })
 
-  test.todo('handles duplicate event (idempotency) - same lago_event_id twice')
+  test.skip('handles duplicate event (idempotency) - same lago_event_id twice')
 
-  test.todo('handles webhook with missing customer - logs but does not crash')
+  test.skip('handles webhook with missing customer - logs but does not crash')
 })
 
 test.describe('Entitlement Enforcement', () => {
 
-  test.todo('POST /ingestion/start returns 402 when item limit reached')
+  test.skip('POST /ingestion/start returns 402 when item limit reached')
 
-  test.todo('POST /outfits/generate returns 402 when daily outfit limit reached')
+  test.skip('POST /outfits/generate returns 402 when daily outfit limit reached')
 
-  test.todo('POST /outfit-trainer/generate returns 402 when daily outfit limit reached')
+  test.skip('POST /outfit-trainer/generate returns 402 when daily outfit limit reached')
 
-  test.todo('returns upgrade_url in 402 response')
+  test.skip('returns upgrade_url in 402 response')
 
-  test.todo('returns resets_at timestamp for daily limits')
+  test.skip('returns resets_at timestamp for daily limits')
 })
