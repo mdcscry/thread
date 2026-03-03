@@ -30,7 +30,7 @@ export default async function outfitsRoutes(fastify, opts) {
     }
 
     // Save outfits to database
-    const insert = db.prepare(`
+    const insert = await db.prepare(`
       INSERT INTO outfits (user_id, item_ids, occasion, event_name, event_date, time_of_day, weather_summary, location, style_intent, chat_prompt, ml_score)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
@@ -83,7 +83,7 @@ export default async function outfitsRoutes(fastify, opts) {
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
     params.push(parseInt(limit), parseInt(offset))
 
-    const outfits = db.prepare(query).all(...params)
+    const outfits = await db.prepare(query).all(...params)
 
     // Expand item_ids to actual items
     return outfits.map(o => ({
@@ -97,7 +97,7 @@ export default async function outfitsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    const outfit = db.prepare('SELECT * FROM outfits WHERE id = ? AND user_id = ?').get(id, userId)
+    const outfit = await db.prepare('SELECT * FROM outfits WHERE id = ? AND user_id = ?').get(id, userId)
     
     if (!outfit) {
       return reply.code(404).send({ error: 'Outfit not found' })
@@ -105,7 +105,7 @@ export default async function outfitsRoutes(fastify, opts) {
 
     // Get the items
     const itemIds = JSON.parse(outfit.item_ids || '[]')
-    const items = itemIds.map(id => db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(id))
+    const items = itemIds.map(async id => await db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(id))
 
     return {
       ...outfit,
@@ -119,7 +119,7 @@ export default async function outfitsRoutes(fastify, opts) {
     const { id } = request.params
     const { feedback, signalType, note } = request.body
 
-    const outfit = db.prepare('SELECT * FROM outfits WHERE id = ? AND user_id = ?').get(id, userId)
+    const outfit = await db.prepare('SELECT * FROM outfits WHERE id = ? AND user_id = ?').get(id, userId)
     
     if (!outfit) {
       return reply.code(404).send({ error: 'Outfit not found' })
@@ -137,7 +137,7 @@ export default async function outfitsRoutes(fastify, opts) {
     await recordFeedback(userId, parseInt(id), type)
 
     if (note) {
-      db.prepare('UPDATE outfits SET feedback_note = ? WHERE id = ?').run(note, id)
+      await db.prepare('UPDATE outfits SET feedback_note = ? WHERE id = ?').run(note, id)
     }
 
     return { success: true, signalType: type }
@@ -148,7 +148,7 @@ export default async function outfitsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    const outfit = db.prepare('SELECT * FROM outfits WHERE id = ? AND user_id = ?').get(id, userId)
+    const outfit = await db.prepare('SELECT * FROM outfits WHERE id = ? AND user_id = ?').get(id, userId)
     
     if (!outfit) {
       return reply.code(404).send({ error: 'Outfit not found' })

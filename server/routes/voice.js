@@ -52,7 +52,7 @@ export default async function voiceRoutes(fastify, opts) {
       }
       fs.renameSync(tempPath, audioPath)
 
-      const noteResult = db.prepare(`
+      const noteResult = await db.prepare(`
         INSERT INTO voice_notes (user_id, raw_audio_path, transcript, intent, confidence, action_taken)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
@@ -90,7 +90,7 @@ export default async function voiceRoutes(fastify, opts) {
     const { userId } = request.user
     const { limit = 20 } = request.query
 
-    return db.prepare(`
+    return await db.prepare(`
       SELECT * FROM voice_notes 
       WHERE user_id = ? 
       ORDER BY created_at DESC 
@@ -118,7 +118,7 @@ async function transcribeAudio(audioPath) {
 // Extract intent using Ollama
 async function extractIntent(transcript, userId) {
   // Get recent context
-  const recentOutfits = db.prepare(`
+  const recentOutfits = await db.prepare(`
     SELECT id, occasion, worn_date FROM outfits 
     WHERE user_id = ? ORDER BY created_at DESC LIMIT 5
   `).all(userId)
@@ -178,7 +178,7 @@ async function processVoiceAction(userId, intent) {
     case 'feedback_recorded':
       if (intent.feedback?.target_description) {
         // Find most recent outfit with matching description
-        const outfit = db.prepare(`
+        const outfit = await db.prepare(`
           SELECT id FROM outfits WHERE user_id = ? ORDER BY created_at DESC LIMIT 1
         `).get(userId)
         

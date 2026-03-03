@@ -14,7 +14,7 @@ export default async function settingsRoutes(fastify, opts) {
   // Get current user info
   fastify.get('/settings/me', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
-    const user = db.prepare('SELECT id, name, email, avatar_url, preferences, created_at FROM users WHERE id = ?').get(userId)
+    const user = await db.prepare('SELECT id, name, email, avatar_url, preferences, created_at FROM users WHERE id = ?').get(userId)
     return user
   })
 
@@ -23,10 +23,10 @@ export default async function settingsRoutes(fastify, opts) {
     const { userId } = request.user
     const { preferences } = request.body
 
-    const current = db.prepare('SELECT preferences FROM users WHERE id = ?').get(userId)
+    const current = await db.prepare('SELECT preferences FROM users WHERE id = ?').get(userId)
     const merged = { ...JSON.parse(current.preferences || '{}'), ...preferences }
 
-    db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(JSON.stringify(merged), userId)
+    await db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(JSON.stringify(merged), userId)
 
     return { preferences: merged }
   })
@@ -34,7 +34,7 @@ export default async function settingsRoutes(fastify, opts) {
   // List API keys
   fastify.get('/settings/api-keys', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
-    return db.prepare(`
+    return await db.prepare(`
       SELECT id, label, permissions, last_used, created_at 
       FROM api_keys WHERE user_id = ?
     `).all(userId)
@@ -48,7 +48,7 @@ export default async function settingsRoutes(fastify, opts) {
     const keyHash = crypto.createHash('sha256').update(crypto.randomBytes(32)).digest('hex')
     const key = `thread_sk_${keyHash}`
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO api_keys (user_id, key_hash, label, permissions)
       VALUES (?, ?, ?, ?)
     `).run(userId, keyHash, label, JSON.stringify(permissions))
@@ -66,14 +66,14 @@ export default async function settingsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    db.prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?').run(id, userId)
+    await db.prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?').run(id, userId)
     return { success: true }
   })
 
   // List webhooks
   fastify.get('/settings/webhooks', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
-    return db.prepare(`
+    return await db.prepare(`
       SELECT id, url, events, active, created_at 
       FROM webhooks WHERE user_id = ?
     `).all(userId)
@@ -86,7 +86,7 @@ export default async function settingsRoutes(fastify, opts) {
 
     const secret = crypto.randomBytes(20).toString('hex')
 
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO webhooks (user_id, url, events, secret)
       VALUES (?, ?, ?, ?)
     `).run(userId, url, JSON.stringify(events), secret)
@@ -105,7 +105,7 @@ export default async function settingsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    db.prepare('DELETE FROM webhooks WHERE id = ? AND user_id = ?').run(id, userId)
+    await db.prepare('DELETE FROM webhooks WHERE id = ? AND user_id = ?').run(id, userId)
     return { success: true }
   })
 
@@ -115,7 +115,7 @@ export default async function settingsRoutes(fastify, opts) {
     const { id } = request.params
     const { active } = request.body
 
-    db.prepare('UPDATE webhooks SET active = ? WHERE id = ? AND user_id = ?').run(active ? 1 : 0, id, userId)
+    await db.prepare('UPDATE webhooks SET active = ? WHERE id = ? AND user_id = ?').run(active ? 1 : 0, id, userId)
     return { success: true }
   })
 
@@ -123,12 +123,12 @@ export default async function settingsRoutes(fastify, opts) {
   fastify.get('/settings/stats', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
 
-    const totalItems = db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_active = 1').get(userId)?.count || 0
-    const totalOutfits = db.prepare('SELECT COUNT(*) as count FROM outfits WHERE user_id = ?').get(userId)?.count || 0
-    const flaggedItems = db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND ai_flagged = 1').get(userId)?.count || 0
-    const lovedItems = db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_loved = 1').get(userId)?.count || 0
-    const inLaundry = db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND in_laundry = 1').get(userId)?.count || 0
-    const stored = db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND storage_status = "stored"').get(userId)?.count || 0
+    const totalItems = await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_active = 1').get(userId)?.count || 0
+    const totalOutfits = await db.prepare('SELECT COUNT(*) as count FROM outfits WHERE user_id = ?').get(userId)?.count || 0
+    const flaggedItems = await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND ai_flagged = 1').get(userId)?.count || 0
+    const lovedItems = await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_loved = 1').get(userId)?.count || 0
+    const inLaundry = await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND in_laundry = 1').get(userId)?.count || 0
+    const stored = await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND storage_status = "stored"').get(userId)?.count || 0
 
     return {
       totalItems,

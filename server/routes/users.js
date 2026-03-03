@@ -5,10 +5,10 @@ export default async function usersRoutes(fastify, opts) {
   // List users
   fastify.get('/users', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     try {
-      return db.prepare('SELECT id, name, email, avatar_url, gender, preferences, created_at FROM users').all()
+      return await db.prepare('SELECT id, name, email, avatar_url, gender, preferences, created_at FROM users').all()
     } catch(e) {
       // Fallback if gender column doesn't exist
-      return db.prepare('SELECT id, name, email, avatar_url, preferences, created_at FROM users').all()
+      return await db.prepare('SELECT id, name, email, avatar_url, preferences, created_at FROM users').all()
     }
   })
 
@@ -17,9 +17,9 @@ export default async function usersRoutes(fastify, opts) {
     const { id } = request.params
     let user
     try {
-      user = db.prepare('SELECT id, name, email, avatar_url, gender, preferences, created_at FROM users WHERE id = ?').get(id)
+      user = await db.prepare('SELECT id, name, email, avatar_url, gender, preferences, created_at FROM users WHERE id = ?').get(id)
     } catch(e) {
-      user = db.prepare('SELECT id, name, email, avatar_url, preferences, created_at FROM users WHERE id = ?').get(id)
+      user = await db.prepare('SELECT id, name, email, avatar_url, preferences, created_at FROM users WHERE id = ?').get(id)
     }
     
     if (!user) {
@@ -28,10 +28,10 @@ export default async function usersRoutes(fastify, opts) {
     
     // Get stats
     const stats = {
-      totalItems: db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_active = 1').get(id)?.count || 0,
-      totalOutfits: db.prepare('SELECT COUNT(*) as count FROM outfits WHERE user_id = ?').get(id)?.count || 0,
-      lovedItems: db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_loved = 1').get(id)?.count || 0,
-      feedbackCount: db.prepare('SELECT COUNT(*) as count FROM preference_events WHERE user_id = ?').get(id)?.count || 0
+      totalItems: await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_active = 1').get(id)?.count || 0,
+      totalOutfits: await db.prepare('SELECT COUNT(*) as count FROM outfits WHERE user_id = ?').get(id)?.count || 0,
+      lovedItems: await db.prepare('SELECT COUNT(*) as count FROM clothing_items WHERE user_id = ? AND is_loved = 1').get(id)?.count || 0,
+      feedbackCount: await db.prepare('SELECT COUNT(*) as count FROM preference_events WHERE user_id = ?').get(id)?.count || 0
     }
     
     return { ...user, stats }
@@ -44,28 +44,28 @@ export default async function usersRoutes(fastify, opts) {
     const { name, avatar_url, gender, preferences } = request.body
     
     if (name) {
-      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, id)
+      await db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, id)
     }
     if (avatar_url) {
-      db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatar_url, id)
+      await db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatar_url, id)
     }
     if (gender) {
       try {
-        db.prepare('UPDATE users SET gender = ? WHERE id = ?').run(gender, id)
+        await db.prepare('UPDATE users SET gender = ? WHERE id = ?').run(gender, id)
       } catch(e) {
         // Column doesn't exist, ignore
       }
     }
     if (preferences) {
-      const current = db.prepare('SELECT preferences FROM users WHERE id = ?').get(id)
+      const current = await db.prepare('SELECT preferences FROM users WHERE id = ?').get(id)
       const merged = { ...JSON.parse(current.preferences || '{}'), ...preferences }
-      db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(JSON.stringify(merged), id)
+      await db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(JSON.stringify(merged), id)
     }
     
     try {
-      return db.prepare('SELECT id, name, email, avatar_url, gender, preferences FROM users WHERE id = ?').get(id)
+      return await db.prepare('SELECT id, name, email, avatar_url, gender, preferences FROM users WHERE id = ?').get(id)
     } catch(e) {
-      return db.prepare('SELECT id, name, email, avatar_url, preferences FROM users WHERE id = ?').get(id)
+      return await db.prepare('SELECT id, name, email, avatar_url, preferences FROM users WHERE id = ?').get(id)
     }
   })
 }

@@ -25,7 +25,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
 
     try {
       // Get excluded items
-      const excludedItems = db.prepare(`
+      const excludedItems = await db.prepare(`
         SELECT item_id FROM item_exclusions WHERE user_id = ?
       `).all(userId)
       const excludedIds = new Set(excludedItems.map(e => e.item_id))
@@ -62,7 +62,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
 
       query += ` ORDER BY ema_score DESC LIMIT 100`
 
-      const items = db.prepare(query).all(...params)
+      const items = await db.prepare(query).all(...params)
       
       // Group by category
       const byCategory = {}
@@ -171,7 +171,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
         thumbs_down: -1.0
       }
 
-      const insert = db.prepare(`
+      const insert = await db.prepare(`
         INSERT INTO outfit_feedback (
           user_id, item_id, outfit_id, feedback_type, feedback_value,
           context_occasion, context_season, context_time_of_day
@@ -196,11 +196,11 @@ export default async function outfitTrainerRoutes(fastify, opts) {
             )
 
             // Immediately update EMA score
-            const item = db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(fb.itemId)
+            const item = await db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(fb.itemId)
             if (item) {
               const weight = fb.feedback === 'thumbs_up' ? 0.6 : -0.8
               const newScore = updateItemScore(item, weight)
-              db.prepare(`
+              await db.prepare(`
                 UPDATE clothing_items SET ema_score = ?, ema_count = ema_count + 1
                 WHERE id = ?
               `).run(newScore.ema_score, fb.itemId)
@@ -212,7 +212,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
       }
 
       // Get updated pending count
-      const pending = db.prepare(`
+      const pending = await db.prepare(`
         SELECT COUNT(*) as count FROM outfit_feedback
         WHERE user_id = ? AND (trained = 0 OR trained IS NULL)
       `).get(userId)
@@ -246,7 +246,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
     }
 
     try {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO item_exclusions (user_id, item_id, reason)
         VALUES (?, ?, ?)
         ON CONFLICT(user_id, item_id) DO NOTHING
@@ -265,7 +265,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
     const { itemId } = request.params
 
     try {
-      db.prepare(`
+      await db.prepare(`
         DELETE FROM item_exclusions WHERE user_id = ? AND item_id = ?
       `).run(userId, itemId)
 
@@ -292,7 +292,7 @@ export default async function outfitTrainerRoutes(fastify, opts) {
       }
 
       // Mark all feedback as trained
-      db.prepare(`
+      await db.prepare(`
         UPDATE outfit_feedback SET trained = 1 WHERE user_id = ? AND (trained = 0 OR trained IS NULL)
       `).run(userId)
 
@@ -320,12 +320,12 @@ export default async function outfitTrainerRoutes(fastify, opts) {
     const { userId } = request.user
 
     try {
-      const pending = db.prepare(`
+      const pending = await db.prepare(`
         SELECT COUNT(*) as count FROM outfit_feedback
         WHERE user_id = ? AND (trained = 0 OR trained IS NULL)
       `).get(userId)
 
-      const excluded = db.prepare(`
+      const excluded = await db.prepare(`
         SELECT COUNT(*) as count FROM item_exclusions WHERE user_id = ?
       `).get(userId)
 

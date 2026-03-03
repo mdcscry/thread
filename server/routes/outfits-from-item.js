@@ -40,14 +40,14 @@ export default async function outfitsFromItemRoutes(fastify, opts) {
     }
 
     // Get the selected item
-    const selectedItem = db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(itemId, userId)
+    const selectedItem = await db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(itemId, userId)
 
     if (!selectedItem) {
       return reply.code(404).send({ error: 'Item not found' })
     }
 
     // Get eligible items (excluding the selected item)
-    const eligibleItems = db.prepare(`
+    const eligibleItems = await db.prepare(`
       SELECT * FROM clothing_items 
       WHERE user_id = ? AND is_active = 1 AND storage_status = 'active' AND in_laundry = 0 AND id != ?
     `).all(userId, itemId)

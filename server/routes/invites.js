@@ -39,7 +39,7 @@ export default async function inviteRoutes(fastify, opts) {
     const expiresAt = addDays(new Date(), 7)
     
     // Create invite
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO invites (token, inviter_user_id, invitee_email, permissions, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(token, userId, email || null, JSON.stringify(invitePermissions), expiresAt, now())
@@ -61,7 +61,7 @@ export default async function inviteRoutes(fastify, opts) {
   fastify.get('/invites', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
     
-    const invites = db.prepare(`
+    const invites = await db.prepare(`
       SELECT id, token, invitee_email, permissions, status, expires_at, accepted_at, created_at
       FROM invites
       WHERE inviter_user_id = ?
@@ -79,7 +79,7 @@ export default async function inviteRoutes(fastify, opts) {
   fastify.get('/invites/:token', async (request, reply) => {
     const { token } = request.params
     
-    const invite = db.prepare(`
+    const invite = await db.prepare(`
       SELECT id, token, inviter_user_id, invitee_email, permissions, status, expires_at, created_at
       FROM invites
       WHERE token = ?
@@ -100,7 +100,7 @@ export default async function inviteRoutes(fastify, opts) {
     }
     
     // Get inviter name
-    const inviter = db.prepare('SELECT name FROM users WHERE id = ?').get(invite.inviter_user_id)
+    const inviter = await db.prepare('SELECT name FROM users WHERE id = ?').get(invite.inviter_user_id)
     
     return {
       id: invite.id,
@@ -117,7 +117,7 @@ export default async function inviteRoutes(fastify, opts) {
     const { token } = request.params
     const { userId } = request.user
     
-    const invite = db.prepare('SELECT * FROM invites WHERE token = ?').get(token)
+    const invite = await db.prepare('SELECT * FROM invites WHERE token = ?').get(token)
     
     if (!invite) {
       return reply.code(404).send({ error: 'Invite not found' })
@@ -134,34 +134,34 @@ export default async function inviteRoutes(fastify, opts) {
     }
     
     // Check email if specified
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
     if (invite.invitee_email && user.email !== invite.invitee_email) {
       // Allow if no email was specified on invite, otherwise check
       return reply.code(403).send({ error: 'This invite was sent to a different email' })
     }
     
     // Create wardrobe_share
-    const existingShare = db.prepare(`
+    const existingShare = await db.prepare(`
       SELECT id FROM wardrobe_shares 
       WHERE owner_user_id = ? AND shared_with_user_id = ?
     `).get(invite.inviter_user_id, userId)
     
     if (!existingShare) {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO wardrobe_shares (owner_user_id, shared_with_user_id, permissions, created_at)
         VALUES (?, ?, ?, ?)
       `).run(invite.inviter_user_id, userId, invite.permissions, now())
     }
     
     // Update invite status
-    db.prepare(`
+    await db.prepare(`
       UPDATE invites 
       SET status = 'accepted', accepted_at = ?
       WHERE token = ?
     `).run(now(), token)
     
     // Get inviter info
-    const inviter = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(invite.inviter_user_id)
+    const inviter = await db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(invite.inviter_user_id)
     
     return {
       message: 'Invite accepted! You now have access to this wardrobe.',
@@ -175,7 +175,7 @@ export default async function inviteRoutes(fastify, opts) {
     const { userId } = request.user
     
     // Get wardrobes shared with me
-    const sharedWithMe = db.prepare(`
+    const sharedWithMe = await db.prepare(`
       SELECT ws.*, u.name as owner_name, u.email as owner_email
       FROM wardrobe_shares ws
       JOIN users u ON ws.owner_user_id = u.id
@@ -183,7 +183,7 @@ export default async function inviteRoutes(fastify, opts) {
     `).all(userId)
     
     // Get my wardrobes shared with others
-    const sharedByMe = db.prepare(`
+    const sharedByMe = await db.prepare(`
       SELECT ws.*, u.name as shared_with_name, u.email as shared_with_email
       FROM wardrobe_shares ws
       JOIN users u ON ws.shared_with_user_id = u.id

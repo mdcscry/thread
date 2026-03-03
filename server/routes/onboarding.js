@@ -11,7 +11,7 @@ export default async function onboardingRoutes(fastify, opts) {
     const { userId } = request.user
     
     // Check if preferences already exist
-    const existing = db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId)
+    const existing = await db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId)
     
     if (existing) {
       return { 
@@ -21,7 +21,7 @@ export default async function onboardingRoutes(fastify, opts) {
     }
     
     // Create new preferences record
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO user_preferences (user_id, created_at, updated_at)
       VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(userId)
@@ -47,11 +47,11 @@ export default async function onboardingRoutes(fastify, opts) {
     } = request.body
     
     // Check if preferences exist
-    let prefs = db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId)
+    let prefs = await db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId)
     
     if (!prefs) {
       // Create if doesn't exist
-      const result = db.prepare(`
+      const result = await db.prepare(`
         INSERT INTO user_preferences (user_id, created_at, updated_at)
         VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(userId)
@@ -91,12 +91,12 @@ export default async function onboardingRoutes(fastify, opts) {
       updates.push('updated_at = CURRENT_TIMESTAMP')
       values.push(userId)
       
-      db.prepare(`UPDATE user_preferences SET ${updates.join(', ')} WHERE user_id = ?`)
+      await db.prepare(`UPDATE user_preferences SET ${updates.join(', ')} WHERE user_id = ?`)
         .run(...values)
     }
     
     // Return updated preferences
-    const updated = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId)
+    const updated = await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId)
     
     return {
       message: 'Preferences saved',
@@ -116,10 +116,10 @@ export default async function onboardingRoutes(fastify, opts) {
     const { userId } = request.user
     
     // Get preferences
-    const prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId)
+    const prefs = await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId)
     
     // Get clothing items count
-    const itemsCount = db.prepare(`
+    const itemsCount = await db.prepare(`
       SELECT COUNT(*) as count FROM clothing_items 
       WHERE user_id = ? AND is_active = 1
     `).get(userId)
@@ -156,10 +156,10 @@ export default async function onboardingRoutes(fastify, opts) {
     }
     
     // Check if preferences exist
-    let prefs = db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId)
+    let prefs = await db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId)
     
     if (!prefs) {
-      const result = db.prepare(`
+      const result = await db.prepare(`
         INSERT INTO user_preferences (user_id, created_at, updated_at)
         VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(userId)
@@ -238,7 +238,7 @@ export default async function onboardingRoutes(fastify, opts) {
     }
     
     // Mark closet intake as completed
-    db.prepare(`
+    await db.prepare(`
       UPDATE user_preferences 
       SET closet_intake_completed = 1, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?

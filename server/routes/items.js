@@ -9,8 +9,8 @@ export default async function itemsRoutes(fastify, opts) {
     const { userId } = request.user
     const { category, flagged, loved, search, inLaundry, stored, offset, limit } = request.query
 
-    let query = db.prepare('SELECT * FROM clothing_items WHERE user_id = ? AND is_active = 1')
-    let items = query.all(userId)
+    let query = await db.prepare('SELECT * FROM clothing_items WHERE user_id = ? AND is_active = 1')
+    let items = await query.all(userId)
 
     if (category) {
       items = items.filter(i => i.category === category)
@@ -48,8 +48,8 @@ export default async function itemsRoutes(fastify, opts) {
     }
 
     // Attach primary image to each item and safely parse JSON fields
-    return items.map(item => {
-      const primaryImage = db.prepare(`
+    return Promise.all(items.map(async item => {
+      const primaryImage = await db.prepare(`
         SELECT * FROM item_images
         WHERE item_id = ? AND is_primary = 1
       `).get(item.id)
@@ -86,14 +86,14 @@ export default async function itemsRoutes(fastify, opts) {
         subcategory: item.subcategory || null,
         primary_image: primaryImage || null
       }
-    })
+    }))
   })
 
   // Get flagged items (MUST be before /items/:id to avoid route collision)
   fastify.get('/items/flagged', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
 
-    return db.prepare(`
+    return await db.prepare(`
       SELECT i.*, r.question, r.field_name as refine_field
       FROM clothing_items i
       LEFT JOIN refinement_prompts r ON i.id = r.item_id AND r.status = 'pending'
@@ -105,7 +105,7 @@ export default async function itemsRoutes(fastify, opts) {
   fastify.get('/items/laundry', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
 
-    return db.prepare(`
+    return await db.prepare(`
       SELECT * FROM clothing_items 
       WHERE user_id = ? AND in_laundry = 1 AND is_active = 1
     `).all(userId)
@@ -115,7 +115,7 @@ export default async function itemsRoutes(fastify, opts) {
   fastify.get('/items/stored', { preHandler: [authenticateApiKey] }, async (request, reply) => {
     const { userId } = request.user
 
-    return db.prepare(`
+    return await db.prepare(`
       SELECT * FROM clothing_items 
       WHERE user_id = ? AND storage_status = 'stored' AND is_active = 1
     `).all(userId)
@@ -126,14 +126,14 @@ export default async function itemsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    const item = db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
+    const item = await db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
     
     if (!item) {
       return reply.code(404).send({ error: 'Item not found' })
     }
 
     // Get images
-    const images = db.prepare(`
+    const images = await db.prepare(`
       SELECT * FROM item_images 
       WHERE item_id = ? 
       ORDER BY is_primary DESC, sort_order ASC
@@ -152,7 +152,7 @@ export default async function itemsRoutes(fastify, opts) {
     const updates = request.body
 
     // Check if item exists first
-    const existing = db.prepare('SELECT id FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
+    const existing = await db.prepare('SELECT id FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
     if (!existing) {
       return reply.code(404).send({ error: 'Item not found' })
     }
@@ -171,10 +171,10 @@ export default async function itemsRoutes(fastify, opts) {
       return updates[f]
     })
 
-    db.prepare(`UPDATE clothing_items SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`)
+    await db.prepare(`UPDATE clothing_items SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`)
       .run(...values, id, userId)
 
-    return db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(id)
+    return await db.prepare('SELECT * FROM clothing_items WHERE id = ?').get(id)
   })
 
   // Toggle loved
@@ -184,14 +184,14 @@ export default async function itemsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    const item = db.prepare('SELECT is_loved FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
+    const item = await db.prepare('SELECT is_loved FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
     
     if (!item) {
       return reply.code(404).send({ error: 'Item not found' })
     }
 
     const newValue = item.is_loved ? 0 : 1
-    db.prepare('UPDATE clothing_items SET is_loved = ? WHERE id = ?').run(newValue, id)
+    await db.prepare('UPDATE clothing_items SET is_loved = ? WHERE id = ?').run(newValue, id)
 
     return { is_loved: newValue }
   })
@@ -202,12 +202,12 @@ export default async function itemsRoutes(fastify, opts) {
     const { id } = request.params
 
     // Check if item exists first
-    const existing = db.prepare('SELECT id FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
+    const existing = await db.prepare('SELECT id FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
     if (!existing) {
       return reply.code(404).send({ error: 'Item not found' })
     }
 
-    db.prepare('UPDATE clothing_items SET is_active = 0 WHERE id = ? AND user_id = ?').run(id, userId)
+    await db.prepare('UPDATE clothing_items SET is_active = 0 WHERE id = ? AND user_id = ?').run(id, userId)
 
     return { success: true }
   })
@@ -219,23 +219,23 @@ export default async function itemsRoutes(fastify, opts) {
     const { answer, field } = request.body
 
     // Update the prompt
-    db.prepare(`
+    await db.prepare(`
       UPDATE refinement_prompts 
       SET status = 'answered', answer = ?, answered_at = CURRENT_TIMESTAMP
       WHERE item_id = ? AND user_id = ? AND field_name = ?
     `).run(answer, id, userId, field)
 
     // Update the item
-    db.prepare(`UPDATE clothing_items SET ${field} = ? WHERE id = ?`).run(answer, id)
+    await db.prepare(`UPDATE clothing_items SET ${field} = ? WHERE id = ?`).run(answer, id)
 
     // Check if all prompts answered
-    const pending = db.prepare(`
+    const pending = await db.prepare(`
       SELECT COUNT(*) as count FROM refinement_prompts 
       WHERE item_id = ? AND status = 'pending'
     `).get(id)
 
     if (pending.count === 0) {
-      db.prepare('UPDATE clothing_items SET ai_flagged = 0, user_reviewed = 1 WHERE id = ?').run(id)
+      await db.prepare('UPDATE clothing_items SET ai_flagged = 0, user_reviewed = 1 WHERE id = ?').run(id)
     }
 
     return { success: true }
@@ -246,7 +246,7 @@ export default async function itemsRoutes(fastify, opts) {
     const { userId } = request.user
     const { id } = request.params
 
-    const item = db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
+    const item = await db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
     if (!item) {
       return reply.code(404).send({ error: 'Item not found' })
     }
@@ -261,14 +261,14 @@ export default async function itemsRoutes(fastify, opts) {
     const { id } = request.params
     const { note } = request.body || {}
 
-    const item = db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
+    const item = await db.prepare('SELECT * FROM clothing_items WHERE id = ? AND user_id = ?').get(id, userId)
     if (!item) {
       return reply.code(404).send({ error: 'Item not found' })
     }
 
     const newStatus = toggleStorage(parseInt(id))
     if (note) {
-      db.prepare('UPDATE clothing_items SET storage_note = ? WHERE id = ?').run(note, id)
+      await db.prepare('UPDATE clothing_items SET storage_note = ? WHERE id = ?').run(note, id)
     }
 
     return { storage_status: newStatus }
