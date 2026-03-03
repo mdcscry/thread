@@ -12,7 +12,7 @@ export async function authenticateApiKey(request, reply) {
   const apiKey = authHeader.slice(7)
   
   // Look up user by API key
-  const user = db('SELECT * FROM users WHERE api_key = ?').get(apiKey)
+  const user = await db('SELECT * FROM users WHERE api_key = ?').get(apiKey)
   
   if (!user) {
     return reply.code(401).send({ error: 'Invalid API key' })
@@ -20,7 +20,7 @@ export async function authenticateApiKey(request, reply) {
 
   // Update last used
   try {
-    db('UPDATE users SET last_used = CURRENT_TIMESTAMP WHERE id = ?').run(user.id)
+    await db('UPDATE users SET last_used = CURRENT_TIMESTAMP WHERE id = ?').run(user.id)
   } catch(e) {}
 
   request.user = {
@@ -41,7 +41,7 @@ export async function optionalAuth(request, reply) {
   }
 
   const apiKey = authHeader.slice(7)
-  const user = db('SELECT * FROM users WHERE api_key = ?').get(apiKey)
+  const user = await db('SELECT * FROM users WHERE api_key = ?').get(apiKey)
   
   if (user) {
     request.user = {

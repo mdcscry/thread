@@ -15,7 +15,7 @@ async function seed() {
   await initializeDatabase()
   
   // Check if users exist
-  const existingUsers = db('SELECT COUNT(*) as count FROM users').get()
+  const existingUsers = await db('SELECT COUNT(*) as count FROM users').get()
   
   if (existingUsers.count > 0) {
     console.log('ℹ️  Users already exist, skipping seed')

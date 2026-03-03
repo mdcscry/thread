@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import VoiceButton from '../components/VoiceButton'
 
 const API_BASE = ''
 
@@ -77,8 +78,18 @@ export default function OutfitStudio({ apiKey }) {
     setLoading(false)
   }
 
+  const handleVoiceResult = ({ transcript }) => {
+    setPrompt(transcript)
+    generateOutfitsWithPrompt(transcript)
+  }
+
   const generateOutfits = async () => {
     if (!prompt.trim()) return
+    await generateOutfitsWithPrompt(prompt)
+  }
+
+  const generateOutfitsWithPrompt = async (text) => {
+    if (!text || !text.trim()) return
 
     setLoading(true)
     setMode('prompt')
@@ -93,10 +104,10 @@ export default function OutfitStudio({ apiKey }) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          chatPrompt: prompt,
-          occasion: extractOccasion(prompt),
+          chatPrompt: text,
+          occasion: extractOccasion(text),
           timeOfDay: getTimeOfDay(),
-          formalityTarget: extractFormality(prompt),
+          formalityTarget: extractFormality(text),
           location: 'Boulder, CO',
           numToGenerate: 15
         })
@@ -212,6 +223,7 @@ export default function OutfitStudio({ apiKey }) {
       {/* Chat Input (Prompt Mode) */}
       {mode === 'prompt' && (
         <div className="card chat-input">
+          <VoiceButton onResult={handleVoiceResult} disabled={loading} />
           <textarea
             placeholder="What do you want to wear? e.g., 'Something cute for brunch with my girls, it's going to be warm'"
             value={prompt}

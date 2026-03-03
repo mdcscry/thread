@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.TEST_URL || 'https://localhost:3000';
+const BASE_URL = process.env.TEST_URL || 'http://localhost:3000';
 
 // Helper to wait for page to be ready
 async function waitForApp(page) {
@@ -8,7 +8,7 @@ async function waitForApp(page) {
 }
 
 // Helper to login
-async function login(page, email = 'you@localhost', password = 'thread123') {
+async function login(page, email = 'you@outerfit.net', password = 'thread123') {
   await page.goto(BASE_URL);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
@@ -22,7 +22,7 @@ test.describe('THREAD Core Functionality', () => {
   
   test('1. Login with email/password works', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[type="email"]', 'you@localhost');
+    await page.fill('input[type="email"]', 'you@outerfit.net');
     await page.fill('input[type="password"]', 'thread123');
     await page.click('button:has-text("Login")');
     
@@ -32,7 +32,7 @@ test.describe('THREAD Core Functionality', () => {
 
   test('2. Login shows error with wrong password', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[type="email"]', 'you@localhost');
+    await page.fill('input[type="email"]', 'you@outerfit.net');
     await page.fill('input[type="password"]', 'wrong');
     await page.click('button:has-text("Login")');
     
@@ -191,7 +191,7 @@ test.describe('THREAD Core Functionality', () => {
     await login(page);
     
     const response = await page.request.get(`${BASE_URL}/api/v1/items`, {
-      headers: { Authorization: `Bearer thread_sk_41eb7a2f83b0c870e77d87dc669e8f781dbf8de040b57934` }
+      headers: { Authorization: `Bearer process.env.TEST_API_KEY || 'thread_sk_52f90a1b08ba02578c52d31f87c0bc69161b5e56'` }
     });
     
     expect(response.ok()).toBe(true);
@@ -203,7 +203,7 @@ test.describe('THREAD Core Functionality', () => {
     await login(page);
     
     const response = await page.request.get(`${BASE_URL}/api/v1/users`, {
-      headers: { Authorization: `Bearer thread_sk_41eb7a2f83b0c870e77d87dc669e8f781dbf8de040b57934` }
+      headers: { Authorization: `Bearer process.env.TEST_API_KEY || 'thread_sk_52f90a1b08ba02578c52d31f87c0bc69161b5e56'` }
     });
     
     expect(response.ok()).toBe(true);

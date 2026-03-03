@@ -1,7 +1,7 @@
 import { test, expect, request } from '@playwright/test'
 
-const BASE = 'https://localhost:3000'
-const API_KEY = 'thread_sk_41eb7a2f83b0c870e77d87dc669e8f781dbf8de040b57934'
+const BASE = process.env.TEST_URL || 'http://localhost:3000'
+const API_KEY = process.env.TEST_API_KEY || 'thread_sk_52f90a1b08ba02578c52d31f87c0bc69161b5e56'
 
 // API tests - fast and reliable
 test('API - users endpoint works', async ({ request }) => {

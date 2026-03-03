@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt'
 
 // Simple login with email/password
 export async function loginUser(email, password) {
-  const user = db('SELECT * FROM users WHERE email = ?').get(email)
+  const user = await db('SELECT * FROM users WHERE email = ?').get(email)
   
   if (!user) {
     return { error: 'Invalid email or password' }

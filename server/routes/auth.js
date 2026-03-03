@@ -72,7 +72,7 @@ export default async function authRoutes(fastify, options) {
     }
     
     // Check if email exists
-    const existing = db('SELECT id FROM users WHERE email = ?').get(email.toLowerCase())
+    const existing = await db('SELECT id FROM users WHERE email = ?').get(email.toLowerCase())
     if (existing) {
       return reply.code(409).send({ error: 'Email already registered' })
     }
@@ -84,7 +84,7 @@ export default async function authRoutes(fastify, options) {
     const apiKey = 'thread_sk_' + crypto.randomBytes(20).toString('hex')
     
     // Insert user
-    const result = db(`
+    const result = await db(`
       INSERT INTO users (email, password, name, api_key, created_at)
       VALUES (?, ?, ?, ?, datetime('now'))
     `).run(email.toLowerCase(), passwordHash, firstName, apiKey)
@@ -119,7 +119,7 @@ export default async function authRoutes(fastify, options) {
     }
     
     // Find user
-    const user = db('SELECT * FROM users WHERE email = ?').get(email.toLowerCase())
+    const user = await db('SELECT * FROM users WHERE email = ?').get(email.toLowerCase())
     if (!user) {
       return reply.code(401).send({ error: 'Invalid email or password' })
     }
@@ -139,7 +139,7 @@ export default async function authRoutes(fastify, options) {
     
     // Generate new API key (rotate on login)
     const apiKey = 'thread_sk_' + crypto.randomBytes(20).toString('hex')
-    db('UPDATE users SET api_key = ?, last_used = datetime(\'now\') WHERE id = ?').run(apiKey, user.id)
+    await db('UPDATE users SET api_key = ?, last_used = datetime(\'now\') WHERE id = ?').run(apiKey, user.id)
     
     return reply.send({
       userId: user.id,
