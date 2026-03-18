@@ -6,7 +6,7 @@ import sharp from 'sharp'
 import db, { runExec, runQuery, saveDb } from '../db/client.js'
 import OllamaService from './OllamaService.js'
 
-const IMAGE_ROOT = process.env.IMAGE_STORAGE_PATH || '/Users/matthewcryer/Documents/outerfit/data/images'
+const IMAGE_ROOT = process.env.IMAGE_STORAGE_PATH || '/data/images'
 
 // Returns { diskPath, dbPath } — diskPath for sharp/fs, dbPath for DB storage
 function imagePaths(userId, hash, suffix) {
@@ -195,7 +195,7 @@ export class IngestionService {
 
     const s = analysis?.structured || {}
 
-    const { lastInsertRowid: itemId } = runExec(`
+    const { lastInsertRowid: itemId } = await runExec(`
       INSERT INTO clothing_items (
         user_id, source_url,
         category, subcategory, primary_color, secondary_color, weft_color, colors,
@@ -260,7 +260,7 @@ export class IngestionService {
     await sharp(inputBuffer).resize(300, 300, { fit: 'cover', position: 'top' }).jpeg({ quality: 80 }).toFile(thumb.diskPath)
 
     // FAST: Insert immediately with pending status, queue for async AI analysis
-    const { lastInsertRowid: itemId } = runExec(`
+    const { lastInsertRowid: itemId } = await runExec(`
       INSERT INTO clothing_items (
         user_id, name, category, subcategory, primary_color, secondary_color, weft_color, colors,
         pattern, material, texture, silhouette, fit, length, style_tags, occasion,

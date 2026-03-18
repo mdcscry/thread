@@ -49,12 +49,17 @@ export function runQuery(sql, params = []) {
 export function runExec(sql, params = []) {
   return new Promise((resolve, reject) => {
     const { sql: finalSql, params: finalParams } = convertParams(sql, params)
-    pool.query(finalSql, finalParams, (err, result) => {
+    // Auto-append RETURNING id for INSERT statements that don't already have it
+    const isInsert = /^\s*INSERT\s/i.test(finalSql)
+    const hasReturning = /RETURNING/i.test(finalSql)
+    const execSql = (isInsert && !hasReturning) ? finalSql + ' RETURNING id' : finalSql
+    pool.query(execSql, finalParams, (err, result) => {
       if (err) {
-        console.error('SQL Error:', err.message, finalSql)
+        console.error('SQL Error:', err.message, execSql)
         reject(err)
       } else {
-        resolve({ lastInsertRowid: parseInt(result.insertId) || 0, changes: result.rowCount || 0 })
+        const insertedId = result.rows?.[0]?.id
+        resolve({ lastInsertRowid: insertedId || result.rowCount || 0, changes: result.rowCount || 0 })
       }
     })
   })
