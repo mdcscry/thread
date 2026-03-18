@@ -153,8 +153,8 @@ export function getAverageEmaScore(itemIds) {
  * @param {number} userId 
  * @returns {Object} { dominantColors: string[], palettePerson: {...} }
  */
-export function buildColorProfile(userId) {
-  const items = db.prepare(`
+export async function buildColorProfile(userId) {
+  const items = await db.prepare(`
     SELECT colors FROM clothing_items 
     WHERE user_id = ? AND is_active = 1 AND user_reviewed = 1
   `).all(userId)

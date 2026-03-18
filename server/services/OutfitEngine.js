@@ -56,7 +56,7 @@ export class OutfitEngine {
     }
 
     // Get user color profile for palette scoring
-    const userProfile = buildColorProfile(userId)
+    const userProfile = await buildColorProfile(userId)
 
     // Generate combinations
     const combinations = this.generateCombinations(eligibleItems, fullContext)
@@ -135,7 +135,7 @@ export class OutfitEngine {
       WHERE user_id = ? AND is_active = 1 AND storage_status = 'active' AND in_laundry = 0
     `)
     
-    let items = query.all(userId)
+    let items = await query.all(userId)
 
     // Filter by weather
     items = items.filter(item => {
