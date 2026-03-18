@@ -169,7 +169,7 @@ export class IngestionService {
     let aiConfidence = 0
 
     try {
-      analysis = await this.ollama.analyzeImageStructured(mediumPath)
+      analysis = await this.ollama.analyzeImageStructured(medium.diskPath)
       
       if (analysis.structured) {
         const s = analysis.structured
