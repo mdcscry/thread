@@ -7,6 +7,17 @@ import db, { runExec, runQuery, saveDb } from '../db/client.js'
 import OllamaService from './OllamaService.js'
 
 const IMAGE_ROOT = process.env.IMAGE_STORAGE_PATH || '/data/images'
+const AI_ANALYSIS_TIMEOUT_MS = 90000 // 90 seconds max for AI analysis
+
+// Helper: run a promise with a timeout
+function withTimeout(promise, ms, errorMsg) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(errorMsg || 'Operation timed out')), ms)
+    )
+  ])
+}
 
 // Returns { diskPath, dbPath } — diskPath for sharp/fs, dbPath for DB storage
 function imagePaths(userId, hash, suffix) {
@@ -322,8 +333,12 @@ export class IngestionService {
     let aiConfidence = 0
 
     try {
-      // Try MiniMax first (fast)
-      analysis = await this.ollama.analyzeImageWithMiniMax(imagePath, 'Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit, silhouette, style tags.')
+      // Try MiniMax first (fast) - with timeout
+      analysis = await withTimeout(
+        this.ollama.analyzeImageWithMiniMax(imagePath, 'Analyze this clothing item. Be very specific about: type, color(s), material, pattern, texture, fit, silhouette, style tags.'),
+        AI_ANALYSIS_TIMEOUT_MS,
+        'MiniMax analysis timed out after 90s'
+      )
       
       // MiniMax returns text - extract structured data
       const rawDescription = typeof analysis === 'string' ? analysis : 'No description'
@@ -347,11 +362,15 @@ export class IngestionService {
       // Keep as 'processing' - will retry with Ollama in next cycle
     }
 
-    // If no analysis, try Ollama (slower)
+    // If no analysis, try Ollama (slower) - with timeout
     if (!analysis?.structured) {
       try {
         console.log('Trying Ollama for item', itemId)
-        analysis = await this.ollama.analyzeWithOllamaDirect(imagePath)
+        analysis = await withTimeout(
+          this.ollama.analyzeWithOllamaDirect(imagePath),
+          AI_ANALYSIS_TIMEOUT_MS,
+          'Ollama analysis timed out after 90s'
+        )
       } catch (err) {
         console.error('Ollama also failed for item', itemId, err.message)
       }
