@@ -5,10 +5,10 @@
 You are the CEO and product lead for **Thread** — an AI wardrobe stylist PWA.
 
 ## Tech Stack
-- Backend: Fastify + sql.js (SQLite)
+- Backend: Fastify + PostgreSQL
 - Frontend: React PWA
 - AI: Gemini 2.5 Flash vision, TF.js-node neural network
-- Login: you@localhost / thread123
+- Login: you@outerfit.net / thread123
 
 ## Quick Start
 ```bash
@@ -17,52 +17,43 @@ node server/index.js
 # Open http://localhost:3000
 ```
 
-## Thread Agents — AI Engineering Team
+## gstack — How to Use
 
-This project uses thread-prefixed agents for all major workflows.
+gstack is a set of **skills invoked via bash**, not subagents.
 
-### Available Agents
-
-| Command | Specialist | What it does |
-|---------|-----------|--------------|
-| `/thread-qa` | QA Lead | Test the app in a real browser, find bugs, fix them |
-| `/thread-review` | Staff Engineer | Code review, auto-fix obvious bugs |
-| `/thread-ship` | Release Engineer | Deploy to production |
-| `/thread-browse` | QA Engineer | Browser automation (used by /thread-qa) |
-| `/thread-plan-ceo-review` | CEO / Founder | Rethink product problems before building |
-| `/thread-plan-eng-review` | Eng Manager | Architecture review |
-| `/thread-plan-design-review` | Senior Designer | Design audit |
-| `/thread-document-release` | Technical Writer | Keep docs synced |
-
-### Agent Model
-- **Primary Model:** ollama/qwen3.5:27b (~22GB VRAM)
-- **Fallback (for parallelism):** qwen3.5:9b (~6.6GB) or qwen3.5:4b (~3.4GB)
-
-**Note:** 27b uses ~22GB/24GB. Run one agent at a time to avoid OOM.
-
-### Important Notes
-
-- **Always use thread-browse** for any web browsing tasks
-- **Agents are prefixed thread-** like the thread-ceo agent
-- gstack core lives in: `.claude/skills/gstack/`
-
-### First-time Setup
-
-If agents aren't working:
+### Browse (QA Testing)
 ```bash
-cd .claude/skills/gstack && ./setup
+# Start browser
+/opt/thread/.claude/skills/gstack/browse/dist/browse goto http://localhost:3000
+
+# Get page snapshot
+/opt/thread/.claude/skills/gstack/browse/dist/browse snapshot
+
+# Click element
+/opt/thread/.claude/skills/gstack/browse/dist/browse click @e5
+```
+
+### Available Commands
+- `goto <url>` — Navigate
+- `snapshot` — Get page with refs (@e1, @e2, etc)
+- `click <ref>` — Click element
+- `fill <ref> <text>` — Fill input
+- `screenshot` — Take screenshot
+- `text` — Get all text
+
+### NOT Subagents
+- Do NOT spawn subagents for QA
+- Use gstack directly via bash
+- The browse binary does the work
+
+## Testing
+```bash
+cd /opt/thread && npx playwright test
 ```
 
 ## Key Files
 - `docs/TODO.md` — Current priorities
 - `docs/CEO-LOG.md` — CEO assessment and roadmap
-- `docs/DESIGN-VS-IMPLEMENTATION.md` — What was built vs designed
 
-## Testing
-```bash
-# Run all tests
-npx playwright test
-
-# Run specific test
-npx playwright test tests/wardrobe.spec.js
-```
+## Branch
+- Working on: `dev`
