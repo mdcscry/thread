@@ -68,9 +68,16 @@ export class IngestionService {
       return { jobId, processed, failed, total: imageUrls.length }
 
     } catch (error) {
-      db.prepare(`UPDATE ingestion_jobs SET status = 'failed', error_log = ? WHERE id = ?`)
-        .run(JSON.stringify([error.message]), jobId)
-      throw error
+      // Error boundary: mark job as failed and log — do not rethrow so async
+      // errors never propagate as unhandled rejections and crash the server.
+      console.error(`[IngestionService] startJob failed (jobId=${jobId}):`, error)
+      try {
+        db.prepare(`UPDATE ingestion_jobs SET status = 'failed', error_log = ? WHERE id = ?`)
+          .run(JSON.stringify([error.message]), jobId)
+      } catch (dbErr) {
+        console.error('[IngestionService] Failed to update job status in DB:', dbErr)
+      }
+      return { jobId, processed: 0, failed: 0, total: 0, error: error.message }
     }
   }
 
