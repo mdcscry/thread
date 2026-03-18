@@ -69,7 +69,8 @@ export class OllamaService {
         model: this.model,
         prompt: prompt,
         images: [imageBase64],
-        stream: false
+        stream: false,
+        keep_alive: 0  // Release VRAM immediately after request
       })
     })
 
@@ -173,7 +174,8 @@ export class OllamaService {
       body: JSON.stringify({
         model: this.textModel,
         prompt: prompt,
-        stream: false
+        stream: false,
+        keep_alive: 0  // Release VRAM immediately after request
       })
     })
 
