@@ -156,3 +156,15 @@ Installed gstack to `.claude/skills/gstack/` with thread-prefixed agents:
 ---
 
 *End of Assessment*
+
+---
+
+## Bugs Fixed (2026-03-17)
+
+| Bug | Fix |
+|-----|-----|
+| Login crash - datetime() | Changed to JavaScript Date.toISOString() |
+| Vacation crash - filter error | Added Array.isArray() check |
+| Missing last_used column | Added to PostgreSQL schema |
+
+**All committed to dev branch.**
