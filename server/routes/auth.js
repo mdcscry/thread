@@ -84,10 +84,11 @@ export default async function authRoutes(fastify, options) {
     const apiKey = 'thread_sk_' + crypto.randomBytes(20).toString('hex')
     
     // Insert user
+    const now = new Date().toISOString()
     const result = await db(`
       INSERT INTO users (email, password, name, api_key, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
-    `).run(email.toLowerCase(), passwordHash, firstName, apiKey)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(email.toLowerCase(), passwordHash, firstName, apiKey, now)
     
     return reply.code(201).send({
       userId: result.lastInsertRowid,
@@ -139,7 +140,8 @@ export default async function authRoutes(fastify, options) {
     
     // Generate new API key (rotate on login)
     const apiKey = 'thread_sk_' + crypto.randomBytes(20).toString('hex')
-    await db('UPDATE users SET api_key = ?, last_used = datetime(\'now\') WHERE id = ?').run(apiKey, user.id)
+    const now = new Date().toISOString()
+    await db('UPDATE users SET api_key = ?, last_used = ? WHERE id = ?').run(apiKey, now, user.id)
     
     return reply.send({
       userId: user.id,

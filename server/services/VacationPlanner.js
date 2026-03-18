@@ -32,10 +32,11 @@ export class VacationPlanner {
       // Get all active items
       let allItems = []
       try {
-        allItems = db.prepare(`
+        const result = db.prepare(`
           SELECT * FROM clothing_items
           WHERE user_id = ? AND is_active = 1
-        `).all(userId) || []
+        `).all(userId)
+        allItems = Array.isArray(result) ? result : []
       } catch (err) {
         console.error('Error fetching items:', err)
         allItems = []
